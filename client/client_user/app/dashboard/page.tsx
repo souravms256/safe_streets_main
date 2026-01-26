@@ -1,5 +1,8 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
+import api from "@/services/api";
 import { Button } from "@/components/ui/Button";
 
 // Mock data
@@ -28,6 +31,18 @@ const recentReports = [
 ];
 
 export default function DashboardPage() {
+    const [user, setUser] = React.useState<{ full_name: string; role: string } | null>(null);
+    const [loading, setLoading] = React.useState(true);
+
+    React.useEffect(() => {
+        api.get("/users/me")
+            .then((res: { data: { full_name: string; role: string } }) => setUser(res.data))
+            .catch((err: any) => console.error("Failed to fetch user:", err))
+            .finally(() => setLoading(false));
+    }, []);
+
+    if (loading) return <div className="p-8">Loading...</div>;
+
     return (
         <div className="min-h-screen bg-slate-50 py-8 dark:bg-slate-950">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -37,7 +52,7 @@ export default function DashboardPage() {
                             Dashboard
                         </h1>
                         <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                            Welcome back, User
+                            Welcome back, {user?.full_name || "User"}
                         </p>
                     </div>
                     <Link href="/report">

@@ -2,17 +2,39 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import Cookies from "js-cookie";
+import api from "@/services/api";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
 export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
 
+    const router = useRouter();
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-        // Simulate API call
-        setTimeout(() => setIsLoading(false), 2000);
+
+        const formData = new FormData(e.currentTarget as HTMLFormElement);
+        const email = formData.get("email") as string;
+        const password = formData.get("password") as string;
+
+        try {
+            const response = await api.post("/auth/login", { email, password });
+            const { access_token, refresh_token } = response.data;
+
+            Cookies.set("access_token", access_token);
+            Cookies.set("refresh_token", refresh_token);
+
+            router.push("/dashboard");
+        } catch (error) {
+            console.error("Login failed:", error);
+            alert("Login failed. Please check your credentials.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
