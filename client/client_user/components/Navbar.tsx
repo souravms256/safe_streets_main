@@ -7,7 +7,6 @@ import { Button } from "./ui/Button";
 
 import ProfileMenu from "./ProfileMenu";
 import api from "@/services/api";
-import Cookies from "js-cookie";
 
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -15,9 +14,8 @@ const Navbar = () => {
     const pathname = usePathname();
 
     useEffect(() => {
-        // Simple check: if access_token exists, try fetch user
-        // Note: For a more robust app, use a Context provider
-        const token = Cookies.get("access_token");
+        // Check localStorage for access_token
+        const token = typeof window !== 'undefined' ? localStorage.getItem("access_token") : null;
         if (token) {
             api.get("/users/me")
                 .then(res => setUser(res.data))

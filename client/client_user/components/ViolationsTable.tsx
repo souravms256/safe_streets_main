@@ -1,15 +1,12 @@
 "use client";
 
-
 import React, { useState } from "react";
-
 
 interface Detection {
     class: string;
     confidence: number;
     bbox: number[];
 }
-
 
 interface ViolationDetails {
     helmet_violations?: number;
@@ -18,7 +15,6 @@ interface ViolationDetails {
     detections?: Detection[];
     output_image?: string;
 }
-
 
 interface Violation {
     id: string;
@@ -31,25 +27,20 @@ interface Violation {
     details?: ViolationDetails;
 }
 
-
 interface ViolationsTableProps {
     violations: Violation[];
 }
 
-
 export default function ViolationsTable({ violations }: ViolationsTableProps) {
     const [selectedViolation, setSelectedViolation] = useState<Violation | null>(null);
-
 
     function openModal(violation: Violation) {
         setSelectedViolation(violation);
     }
 
-
     function closeModal() {
         setSelectedViolation(null);
     }
-
 
     return (
         <>
@@ -147,7 +138,6 @@ export default function ViolationsTable({ violations }: ViolationsTableProps) {
                 </div>
             </div>
 
-
             {/* Details Modal */}
             {selectedViolation && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -156,7 +146,6 @@ export default function ViolationsTable({ violations }: ViolationsTableProps) {
                         className="fixed inset-0 bg-black/60 backdrop-blur-sm"
                         onClick={closeModal}
                     />
-
 
                     {/* Modal Content */}
                     <div className="relative z-10 w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-4 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl">
@@ -175,7 +164,6 @@ export default function ViolationsTable({ violations }: ViolationsTableProps) {
                             </button>
                         </div>
 
-
                         {/* Body */}
                         <div className="p-6 space-y-6">
                             {/* Violation Image */}
@@ -186,7 +174,6 @@ export default function ViolationsTable({ violations }: ViolationsTableProps) {
                                     className="w-full max-h-[300px] object-contain bg-slate-100 dark:bg-slate-800"
                                 />
                             </div>
-
 
                             {/* Detection Summary */}
                             <div className="grid grid-cols-2 gap-4">
@@ -204,14 +191,12 @@ export default function ViolationsTable({ violations }: ViolationsTableProps) {
                                 </div>
                             </div>
 
-
                             {/* AI Detection Results */}
                             {selectedViolation.details && (
                                 <div className="space-y-4">
                                     <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
                                         AI Analysis Results
                                     </h4>
-
 
                                     <div className="grid grid-cols-3 gap-3">
                                         <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg text-center">
@@ -233,7 +218,6 @@ export default function ViolationsTable({ violations }: ViolationsTableProps) {
                                             <p className="text-xs text-blue-500 dark:text-blue-400">Riders Detected</p>
                                         </div>
                                     </div>
-
 
                                     {/* Detections List */}
                                     {selectedViolation.details.detections && selectedViolation.details.detections.length > 0 && (
@@ -257,7 +241,6 @@ export default function ViolationsTable({ violations }: ViolationsTableProps) {
                                     )}
                                 </div>
                             )}
-
 
                             {/* Metadata */}
                             <div className="grid grid-cols-2 gap-4 text-sm text-slate-600 dark:text-slate-400 pt-4 border-t border-slate-200 dark:border-slate-700">
