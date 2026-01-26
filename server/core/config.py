@@ -19,4 +19,7 @@ class Settings:
     # CORS – return list instead of raw string
     ALLOWED_ORIGINS: list = os.getenv("ALLOWED_ORIGINS", "*").split(",")
 
+    # AI Model
+    MODEL_API_URL: str = os.getenv("MODEL_API_URL", "http://localhost:8000/detect")
+
 settings = Settings()
