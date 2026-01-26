@@ -20,6 +20,7 @@ export default function RegisterPage() {
         const full_name = formData.get("name") as string;
         const email = formData.get("email") as string;
         const password = formData.get("password") as string;
+        const dob = formData.get("dob") as string;
 
         try {
             // SignupRequest expects: full_name, email, password, dob?, role?
@@ -27,6 +28,7 @@ export default function RegisterPage() {
                 full_name,
                 email,
                 password,
+                dob,
                 role: "user"
             });
 
@@ -61,6 +63,13 @@ export default function RegisterPage() {
                             required
                             label="Full Name"
                             placeholder="John Doe"
+                        />
+                        <Input
+                            id="dob"
+                            name="dob"
+                            type="date"
+                            required
+                            label="Date of Birth"
                         />
                         <Input
                             id="email"

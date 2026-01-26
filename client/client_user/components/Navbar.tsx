@@ -1,16 +1,35 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "./ui/Button";
 
+import ProfileMenu from "./ProfileMenu";
+import api from "@/services/api";
+import Cookies from "js-cookie";
+
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
+    const [user, setUser] = useState<any>(null);
     const pathname = usePathname();
+
+    useEffect(() => {
+        // Simple check: if access_token exists, try fetch user
+        // Note: For a more robust app, use a Context provider
+        const token = Cookies.get("access_token");
+        if (token) {
+            api.get("/users/me")
+                .then(res => setUser(res.data))
+                .catch(() => setUser(null)); // Token might be invalid
+        } else {
+            setUser(null);
+        }
+    }, [pathname]); // Re-check on route change (e.g. after login redirect)
 
     const navLinks = [
         { name: "Home", href: "/" },
+        { name: "Dashboard", href: "/dashboard" }, // Added Dashboard link
         { name: "About", href: "/about" },
         { name: "Contact", href: "/contact" },
     ];
@@ -38,8 +57,8 @@ const Navbar = () => {
                                     key={link.name}
                                     href={link.href}
                                     className={`text-sm font-medium transition-colors hover:text-blue-600 dark:hover:text-blue-400 ${isActive(link.href)
-                                            ? "text-blue-600 dark:text-blue-500"
-                                            : "text-slate-600 dark:text-slate-300"
+                                        ? "text-blue-600 dark:text-blue-500"
+                                        : "text-slate-600 dark:text-slate-300"
                                         }`}
                                 >
                                     {link.name}
@@ -50,18 +69,22 @@ const Navbar = () => {
 
                     {/* Desktop Auth Buttons */}
                     <div className="hidden md:block">
-                        <div className="flex items-center space-x-4">
-                            <Link href="/login">
-                                <Button variant="ghost" size="sm">
-                                    Log in
-                                </Button>
-                            </Link>
-                            <Link href="/register">
-                                <Button variant="primary" size="sm">
-                                    Sign up
-                                </Button>
-                            </Link>
-                        </div>
+                        {user ? (
+                            <ProfileMenu user={user} />
+                        ) : (
+                            <div className="flex items-center space-x-4">
+                                <Link href="/login">
+                                    <Button variant="ghost" size="sm">
+                                        Log in
+                                    </Button>
+                                </Link>
+                                <Link href="/register">
+                                    <Button variant="primary" size="sm">
+                                        Sign up
+                                    </Button>
+                                </Link>
+                            </div>
+                        )}
                     </div>
 
                     {/* Mobile menu button */}
@@ -115,8 +138,8 @@ const Navbar = () => {
                                 href={link.href}
                                 onClick={() => setIsOpen(false)}
                                 className={`block rounded-md px-3 py-2 text-base font-medium ${isActive(link.href)
-                                        ? "bg-blue-50 text-blue-600 dark:bg-slate-800 dark:text-blue-500"
-                                        : "text-slate-600 hover:bg-slate-50 hover:text-blue-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-blue-400"
+                                    ? "bg-blue-50 text-blue-600 dark:bg-slate-800 dark:text-blue-500"
+                                    : "text-slate-600 hover:bg-slate-50 hover:text-blue-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-blue-400"
                                     }`}
                             >
                                 {link.name}

@@ -6,6 +6,7 @@ from routers.auth import router as auth_router
 from routers.users import router as users_router
 from routers.admin import router as admin_router
 from routers.health import router as health_router
+from routers.violations import router as violations_router
 
 app = FastAPI(
     title="AI Powered Traffic Violation Detection System",
@@ -25,6 +26,7 @@ app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(admin_router)
+app.include_router(violations_router)
 
 # @app.get("/")
 # def root():
