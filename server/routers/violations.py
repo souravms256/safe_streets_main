@@ -5,82 +5,88 @@ from services.detector import detector
 from datetime import datetime
 import uuid
 
+
 router = APIRouter(prefix="/violations", tags=["Violations"])
+
 
 BUCKET_NAME = "violation-evidence"
 
+
 @router.post("/")
 async def report_violation(
-    file: UploadFile = File(...),
-    latitude: float = Form(...),
-    longitude: float = Form(...),
-    timestamp: str = Form(...),
-    current_user: dict = Depends(get_current_user)
+   file: UploadFile = File(...),
+   latitude: float = Form(...),
+   longitude: float = Form(...),
+   timestamp: str = Form(...),
+   current_user: dict = Depends(get_current_user)
 ):
-    """
-    Upload a new violation report.
-    - Uploads image to Supabase Storage
-    - Runs AI detection
-    - Saves record to Database
-    """
-    
-    # 1. Read file content
-    contents = await file.read()
-    
-    # 2. Run AI Detection
-    detected_type, details = detector.detect(contents)
-    
-    # 3. Upload to Supabase Storage
-    file_ext = file.filename.split(".")[-1]
-    file_name = f"{current_user['user_id']}/{uuid.uuid4()}.{file_ext}"
-    
-    try:
-        # Upload using standard supabase storage api
-        # Note: Ensure the bucket exists and policies allow upload
-        res = supabase.storage.from_(BUCKET_NAME).upload(
-            path=file_name,
-            file=contents,
-            file_options={"content-type": file.content_type}
-        )
-        
-        # Get public URL
-        public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(file_name)
-        
-    except Exception as e:
-        print(f"Storage upload failed: {e}")
-        # Fallback or error handling - for now raising HTTP exception
-        raise HTTPException(status_code=500, detail=f"Image upload failed: {str(e)}")
+   """
+   Upload a new violation report.
+   - Uploads image to Supabase Storage
+   - Runs AI detection
+   - Saves record to Database
+   """
+  
+   # 1. Read file content
+   contents = await file.read()
+  
+   # 2. Run AI Detection
+   detected_type, details = detector.detect(contents)
+  
+   # 3. Upload to Supabase Storage
+   file_ext = file.filename.split(".")[-1]
+   file_name = f"{current_user['user_id']}/{uuid.uuid4()}.{file_ext}"
+  
+   try:
+       # Upload using standard supabase storage api
+       # Note: Ensure the bucket exists and policies allow upload
+       res = supabase.storage.from_(BUCKET_NAME).upload(
+           path=file_name,
+           file=contents,
+           file_options={"content-type": file.content_type}
+       )
+      
+       # Get public URL
+       public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(file_name)
+      
+   except Exception as e:
+       print(f"Storage upload failed: {e}")
+       # Fallback or error handling - for now raising HTTP exception
+       raise HTTPException(status_code=500, detail=f"Image upload failed: {str(e)}")
 
-    # 4. Insert into Database
-    violation_data = {
-        "user_id": current_user["user_id"],
-        "image_url": public_url,
-        "violation_type": detected_type,
-        "status": "Under Review",  # Default status
-        "location": f"{latitude}, {longitude}", # storing as simple string for now
-        "timestamp": timestamp,
-        "details": details,
-        "created_at": datetime.utcnow().isoformat()
-    }
-    
-    try:
-        result = supabase.table("violations").insert(violation_data).execute()
-    except Exception as e:
-         raise HTTPException(status_code=500, detail=f"Database insert failed: {str(e)}")
 
-    return {
-        "message": "Violation reported successfully",
-        "violation": result.data[0],
-        "detected_type": detected_type
-    }
+   # 4. Insert into Database
+   violation_data = {
+       "user_id": current_user["user_id"],
+       "image_url": public_url,
+       "violation_type": detected_type,
+       "status": "Under Review",  # Default status
+       "location": f"{latitude}, {longitude}", # storing as simple string for now
+       "timestamp": timestamp,
+       "details": details,
+       "created_at": datetime.utcnow().isoformat()
+   }
+  
+   try:
+       result = supabase.table("violations").insert(violation_data).execute()
+   except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database insert failed: {str(e)}")
+
+
+   return {
+       "message": "Violation reported successfully",
+       "violation": result.data[0],
+       "detected_type": detected_type
+   }
+
 
 @router.get("/")
 def get_my_violations(current_user: dict = Depends(get_current_user)):
-    """
-    Fetch all violations reported by the current user.
-    """
-    try:
-        response = supabase.table("violations").select("*").eq("user_id", current_user["user_id"]).order("created_at", desc=True).execute()
-        return response.data
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+   """
+   Fetch all violations reported by the current user.
+   """
+   try:
+       response = supabase.table("violations").select("*").eq("user_id", current_user["user_id"]).order("created_at", desc=True).execute()
+       return response.data
+   except Exception as e:
+       raise HTTPException(status_code=500, detail=str(e))
