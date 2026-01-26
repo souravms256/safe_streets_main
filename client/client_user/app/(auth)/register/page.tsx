@@ -2,17 +2,44 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import api from "@/services/api";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
 export default function RegisterPage() {
     const [isLoading, setIsLoading] = useState(false);
 
+    const router = useRouter();
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-        // Simulate API call
-        setTimeout(() => setIsLoading(false), 2000);
+
+        const formData = new FormData(e.currentTarget as HTMLFormElement);
+        const full_name = formData.get("name") as string;
+        const email = formData.get("email") as string;
+        const password = formData.get("password") as string;
+        const dob = formData.get("dob") as string;
+
+        try {
+            // SignupRequest expects: full_name, email, password, dob?, role?
+            await api.post("/auth/signup", {
+                full_name,
+                email,
+                password,
+                dob,
+                role: "user"
+            });
+
+            alert("Account created successfully! Please log in.");
+            router.push("/login");
+        } catch (error) {
+            console.error("Signup failed:", error);
+            alert("Signup failed. Please try again.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -36,6 +63,13 @@ export default function RegisterPage() {
                             required
                             label="Full Name"
                             placeholder="John Doe"
+                        />
+                        <Input
+                            id="dob"
+                            name="dob"
+                            type="date"
+                            required
+                            label="Date of Birth"
                         />
                         <Input
                             id="email"
