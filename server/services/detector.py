@@ -15,14 +15,14 @@ class ViolationDetector:
             image_bytes (bytes): The raw bytes of the image file.
             
         Returns:
-            str: The detected violation label (e.g., "No Parking", "Helmetless Riding").
+            tuple: (violation_type: str, details: dict)
         """
         try:
             # Prepare file for upload
             files = {'file': ('image.jpg', image_bytes, 'image/jpeg')}
             
             # Call the external API
-            response = requests.post(settings.MODEL_API_URL, files=files, timeout=10)
+            response = requests.post(settings.MODEL_API_URL, files=files, timeout=30)
             
             if response.status_code == 200:
                 try:
@@ -40,11 +40,6 @@ class ViolationDetector:
                     # Check for Helmet Violations
                     if data.get("helmet_violations", 0) > 0:
                         violations.append("Helmet Violation")
-                    
-                    # Check for No Parking (assuming the API might return this key based on new user prompt)
-                    # The user prompt showed "No Parking" in previous JSON example, let's keep it safe.
-                    if data.get("violation_type") == "No Parking":
-                        violations.append("No Parking")
 
                     if not violations:
                         violation_type = "No Violation"
