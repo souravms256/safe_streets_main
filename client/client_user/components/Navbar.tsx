@@ -35,32 +35,26 @@ const Navbar = () => {
 
     const dashboardLinks = [
         { name: "Dashboard", href: "/dashboard" },
-        { name: "My Reports", href: "/dashboard" }, // Can add more dashboard specific links here
+        { name: "Map View", href: "/map" },
     ];
 
-    // If on dashboard, show dashboard links (or keep it simple), else public links
-    // User requested "header in dashboard should be different", so let's differentiate.
-    // Dashboard header will be simpler/focused.
-    const activeLinks = isDashboard ? dashboardLinks : publicLinks;
+    // Show dashboard links if user is logged in, otherwise public links
+    const activeLinks = user ? dashboardLinks : publicLinks;
+    const isLoggedOut = !user;
 
 
     const isActive = (path: string) => pathname === path;
 
     return (
-        <nav className="fixed top-0 left-0 right-0 z-50 border-b border-slate-200 bg-white/80 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/80">
+        <nav className="fixed top-0 left-0 right-0 z-[2000] border-b border-slate-200 bg-white/80 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/80">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div className="flex h-16 items-center justify-between">
                     {/* Logo */}
                     <div className="flex-shrink-0">
-                        <Link href={isDashboard ? "/dashboard" : "/"} className="flex items-center gap-2">
+                        <Link href={user ? "/dashboard" : "/"} className="flex items-center gap-2">
                             <span className="text-2xl font-bold text-blue-600 dark:text-blue-500">
                                 SafeStreets
                             </span>
-                            {isDashboard && (
-                                <span className="hidden sm:inline-block text-sm font-medium text-slate-500 dark:text-slate-400 border-l border-slate-300 dark:border-slate-700 pl-3 ml-3">
-                                    Dashboard
-                                </span>
-                            )}
                         </Link>
                     </div>
 

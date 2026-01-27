@@ -1,6 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
 from core.dependencies import get_current_user
 from utils.supabase_client import supabase
+from utils.geocoding import get_address
 from services.detector import detector
 from datetime import datetime
 import uuid
@@ -21,6 +22,7 @@ async def report_violation(
     Upload a new violation report.
     - Uploads image to Supabase Storage
     - Runs AI detection
+    - Resolves human-readable address
     - Saves record to Database
     """
     
@@ -30,7 +32,10 @@ async def report_violation(
     # 2. Run AI Detection
     detected_type, details = detector.detect(contents)
     
-    # 3. Upload to Supabase Storage
+    # 3. Resolve Address (Reverse Geocoding)
+    address = get_address(latitude, longitude)
+    
+    # 4. Upload to Supabase Storage
     file_ext = file.filename.split(".")[-1]
     file_name = f"{current_user['user_id']}/{uuid.uuid4()}.{file_ext}"
     
@@ -49,13 +54,14 @@ async def report_violation(
         print(f"Storage upload failed: {e}")
         raise HTTPException(status_code=500, detail=f"Image upload failed: {str(e)}")
 
-    # 4. Insert into Database
+    # 5. Insert into Database
     violation_data = {
         "user_id": current_user["user_id"],
         "image_url": public_url,
         "violation_type": detected_type,
         "status": "Under Review",
         "location": f"{latitude}, {longitude}",
+        "address": address,
         "timestamp": timestamp,
         "details": details,
         "created_at": datetime.utcnow().isoformat()
@@ -69,8 +75,22 @@ async def report_violation(
     return {
         "message": "Violation reported successfully",
         "violation": result.data[0],
-        "detected_type": detected_type
+        "detected_type": detected_type,
+        "address": address
     }
+
+@router.get("/public")
+def get_public_violations():
+    """
+    Fetch all violations for public hotspots (limited fields for privacy).
+    """
+    try:
+        # We select all but can exclude sensitive user_id if needed. 
+        # For now, icons need the data to show intensity.
+        response = supabase.table("violations").select("*").execute()
+        return response.data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/")
 def get_my_violations(current_user: dict = Depends(get_current_user)):

@@ -22,6 +22,7 @@ interface Violation {
     violation_type: string;
     status: string;
     location: string;
+    address?: string;
     timestamp: string;
     created_at: string;
     details?: ViolationDetails;
@@ -152,8 +153,10 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                                             {violation.status}
                                         </span>
                                     </td>
-                                    <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-500 dark:text-slate-400">
-                                        {violation.location}
+                                    <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">
+                                        <div className="max-w-xs overflow-hidden text-ellipsis whitespace-nowrap" title={violation.address || violation.location}>
+                                            {violation.address || violation.location}
+                                        </div>
                                     </td>
                                     <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-500 dark:text-slate-400">
                                         {new Date(violation.created_at).toLocaleDateString()}
@@ -351,8 +354,8 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                                 <div>
                                     <strong>Date:</strong> {new Date(selectedViolation.created_at).toLocaleString()}
                                 </div>
-                                <div>
-                                    <strong>Location:</strong> {selectedViolation.location}
+                                <div className="col-span-2">
+                                    <strong>Location:</strong> {selectedViolation.address || selectedViolation.location}
                                 </div>
                             </div>
                         </div>

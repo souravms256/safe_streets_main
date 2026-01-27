@@ -5,6 +5,30 @@ import Link from "next/link";
 import api from "@/services/api";
 import { Button } from "@/components/ui/Button";
 import ViolationsTable from "@/components/ViolationsTable";
+import { motion } from "framer-motion";
+import {
+    FileText,
+    CheckCircle2,
+    Clock,
+    Plus,
+    LayoutDashboard,
+    AlertCircle
+} from "lucide-react";
+
+const container = {
+    hidden: { opacity: 0 },
+    show: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1
+        }
+    }
+};
+
+const item = {
+    hidden: { y: 20, opacity: 0 },
+    show: { y: 0, opacity: 1 }
+};
 
 export default function DashboardPage() {
     const [user, setUser] = React.useState<{ full_name: string; role: string } | null>(null);
@@ -23,12 +47,19 @@ export default function DashboardPage() {
             .finally(() => setLoading(false));
     }, []);
 
-    if (loading) return <div className="p-8">Loading...</div>;
+    if (loading) return (
+        <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+            <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                className="h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full"
+            />
+        </div>
+    );
 
     const handleDelete = async (id: string) => {
         try {
             await api.delete(`/violations/${id}`);
-            // Optimistically update the UI
             setViolations((prev) => prev.filter((v) => v.id !== id));
         } catch (error) {
             console.error("Failed to delete violation:", error);
@@ -36,80 +67,119 @@ export default function DashboardPage() {
         }
     };
 
+    const stats = [
+        {
+            label: "Total Reports",
+            value: violations.length,
+            icon: FileText,
+            color: "blue"
+        },
+        {
+            label: "Verified",
+            value: violations.filter(v => v.status === 'Verified').length,
+            icon: CheckCircle2,
+            color: "green"
+        },
+        {
+            label: "Pending Review",
+            value: violations.filter(v => v.status === 'Under Review').length,
+            icon: Clock,
+            color: "yellow"
+        }
+    ];
+
     return (
         <div className="min-h-screen bg-slate-50 py-8 dark:bg-slate-950">
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                <div className="mb-8 flex items-center justify-between">
+            <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"
+            >
+                <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-                            Dashboard
-                        </h1>
-                        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                            Welcome back, {user?.full_name || "User"}
+                        <div className="flex items-center gap-2 mb-1">
+                            <LayoutDashboard className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+                                Dashboard
+                            </h1>
+                        </div>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                            Welcome back, <span className="font-semibold text-slate-900 dark:text-slate-100">{user?.full_name || "User"}</span>
                         </p>
                     </div>
                     <Link href="/report">
-                        <Button>
-                            + New Report
+                        <Button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white gap-2 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-blue-500/20">
+                            <Plus className="w-4 h-4" />
+                            New Report
                         </Button>
                     </Link>
                 </div>
 
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                    {/* Stats Cards */}
-                    <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                                Total Reports
-                            </h3>
-                            <span className="p-2 bg-blue-50 text-blue-600 rounded-lg dark:bg-blue-900/20 dark:text-blue-400">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                                </svg>
-                            </span>
-                        </div>
-                        <p className="mt-4 text-3xl font-bold text-slate-900 dark:text-white">
-                            {violations.length}
-                        </p>
-                    </div>
+                <motion.div
+                    variants={container}
+                    initial="hidden"
+                    animate="show"
+                    className="grid grid-cols-1 gap-6 md:grid-cols-3"
+                >
+                    {stats.map((stat, index) => (
+                        <motion.div
+                            key={index}
+                            variants={item}
+                            whileHover={{ y: -5 }}
+                            className="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm dark:bg-slate-900 border border-slate-100 dark:border-slate-800 transition-all hover:shadow-xl dark:hover:border-slate-700"
+                        >
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                                    {stat.label}
+                                </h3>
+                                <span className={`p-2.5 rounded-xl transition-colors
+                                    ${stat.color === 'blue' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 group-hover:bg-blue-100' : ''}
+                                    ${stat.color === 'green' ? 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400 group-hover:bg-green-100' : ''}
+                                    ${stat.color === 'yellow' ? 'bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400 group-hover:bg-yellow-100' : ''}
+                                `}>
+                                    <stat.icon className="w-5 h-5" />
+                                </span>
+                            </div>
+                            <p className="mt-4 text-3xl font-bold text-slate-900 dark:text-white">
+                                {stat.value}
+                            </p>
+                            <div className={`absolute bottom-0 left-0 h-1 w-full transition-all scale-x-0 group-hover:scale-x-100
+                                ${stat.color === 'blue' ? 'bg-blue-500' : ''}
+                                ${stat.color === 'green' ? 'bg-green-500' : ''}
+                                ${stat.color === 'yellow' ? 'bg-yellow-500' : ''}
+                            `} />
+                        </motion.div>
+                    ))}
+                </motion.div>
 
-                    <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                                Verified
-                            </h3>
-                            <span className="p-2 bg-green-50 text-green-600 rounded-lg dark:bg-green-900/20 dark:text-green-400">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                                </svg>
-                            </span>
+                {violations.length === 0 ? (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.5 }}
+                        className="mt-8 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 p-12 text-center"
+                    >
+                        <AlertCircle className="mb-4 h-12 w-12 text-slate-300 dark:text-slate-700" />
+                        <h3 className="text-lg font-medium text-slate-900 dark:text-white">No reports found</h3>
+                        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Get started by reporting your first traffic violation.</p>
+                        <Link href="/report" className="mt-4 text-blue-600 hover:text-blue-500 font-medium">
+                            Report a Violation &rarr;
+                        </Link>
+                    </motion.div>
+                ) : (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.4 }}
+                        className="mt-8 overflow-hidden rounded-2xl bg-white shadow-sm dark:bg-slate-900 border border-slate-100 dark:border-slate-800"
+                    >
+                        <div className="p-6 border-b border-slate-100 dark:border-slate-800">
+                            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Recent Reports</h2>
                         </div>
-                        <p className="mt-4 text-3xl font-bold text-slate-900 dark:text-white">
-                            {violations.filter(v => v.status === 'Verified').length}
-                        </p>
-                    </div>
-
-                    <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                                Pending Review
-                            </h3>
-                            <span className="p-2 bg-yellow-50 text-yellow-600 rounded-lg dark:bg-yellow-900/20 dark:text-yellow-400">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                                </svg>
-                            </span>
-                        </div>
-                        <p className="mt-4 text-3xl font-bold text-slate-900 dark:text-white">
-                            {violations.filter(v => v.status === 'Under Review').length}
-                        </p>
-                    </div>
-                </div>
-
-                <div className="mt-8">
-                    <ViolationsTable violations={violations} onDelete={handleDelete} />
-                </div>
-            </div>
+                        <ViolationsTable violations={violations} onDelete={handleDelete} />
+                    </motion.div>
+                )}
+            </motion.div>
         </div>
     );
 }

@@ -12,11 +12,18 @@
     "@capacitor/android": "^8.0.1",
     "@capacitor/cli": "^2.5.0",
     "@capacitor/core": "^8.0.1",
+    "@types/leaflet": "^1.9.21",
+    "@types/leaflet.heat": "^0.2.5",
     "axios": "^1.13.3",
+    "framer-motion": "^12.29.2",
     "js-cookie": "^3.0.5",
+    "leaflet": "^1.9.4",
+    "leaflet.heat": "^0.2.0",
+    "lucide-react": "^0.563.0",
     "next": "16.1.4",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "react-leaflet": "^5.0.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
