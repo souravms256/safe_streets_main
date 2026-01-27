@@ -82,3 +82,29 @@ def get_my_violations(current_user: dict = Depends(get_current_user)):
         return response.data
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/{violation_id}")
+def delete_violation(violation_id: str, current_user: dict = Depends(get_current_user)):
+    """
+    Delete a violation report by ID.
+    Only allows users to delete their own reports.
+    """
+    try:
+        # Check if violation exists and belongs to user
+        existing = supabase.table("violations").select("user_id").eq("id", violation_id).execute()
+        
+        if not existing.data:
+            raise HTTPException(status_code=404, detail="Violation not found")
+            
+        if existing.data[0]["user_id"] != current_user["user_id"]:
+            raise HTTPException(status_code=403, detail="Not authorized to delete this report")
+            
+        # Delete from database
+        supabase.table("violations").delete().eq("id", violation_id).execute()
+        
+        return {"message": "Violation deleted successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

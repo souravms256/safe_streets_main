@@ -25,6 +25,17 @@ export default function DashboardPage() {
 
     if (loading) return <div className="p-8">Loading...</div>;
 
+    const handleDelete = async (id: string) => {
+        try {
+            await api.delete(`/violations/${id}`);
+            // Optimistically update the UI
+            setViolations((prev) => prev.filter((v) => v.id !== id));
+        } catch (error) {
+            console.error("Failed to delete violation:", error);
+            alert("Failed to delete report. Please try again.");
+        }
+    };
+
     return (
         <div className="min-h-screen bg-slate-50 py-8 dark:bg-slate-950">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -54,11 +65,10 @@ export default function DashboardPage() {
                             {violations.length}
                         </p>
                     </div>
-                    {/* ... other stats can be derived from violations array if needed ... */}
                 </div>
 
                 <div className="mt-8">
-                    <ViolationsTable violations={violations} />
+                    <ViolationsTable violations={violations} onDelete={handleDelete} />
                 </div>
             </div>
         </div>

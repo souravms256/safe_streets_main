@@ -29,11 +29,26 @@ interface Violation {
 
 interface ViolationsTableProps {
     violations: Violation[];
+    onDelete?: (id: string) => void;
 }
 
-export default function ViolationsTable({ violations }: ViolationsTableProps) {
+export default function ViolationsTable({ violations, onDelete }: ViolationsTableProps) {
     const [selectedViolation, setSelectedViolation] = useState<Violation | null>(null);
+    const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
+    async function handleDelete(e: React.MouseEvent, id: string) {
+        e.stopPropagation();
+        if (window.confirm("Are you sure you want to delete this report?")) {
+            if (onDelete) {
+                setIsDeleting(id);
+                try {
+                    await onDelete(id);
+                } finally {
+                    setIsDeleting(null);
+                }
+            }
+        }
+    }
     function openModal(violation: Violation) {
         setSelectedViolation(violation);
     }
@@ -110,16 +125,35 @@ export default function ViolationsTable({ violations }: ViolationsTableProps) {
                                         {new Date(violation.created_at).toLocaleDateString()}
                                     </td>
                                     <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                                        <button
-                                            onClick={() => openModal(violation)}
-                                            className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-                                            title="View Details"
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                                            </svg>
-                                        </button>
+                                        <div className="flex items-center justify-end space-x-2">
+                                            <button
+                                                onClick={() => openModal(violation)}
+                                                className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                                                title="View Details"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                                </svg>
+                                            </button>
+                                            <button
+                                                onClick={(e) => handleDelete(e, violation.id)}
+                                                disabled={isDeleting === violation.id}
+                                                className="text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition-colors disabled:opacity-50"
+                                                title="Delete Report"
+                                            >
+                                                {isDeleting === violation.id ? (
+                                                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                ) : (
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                                    </svg>
+                                                )}
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
