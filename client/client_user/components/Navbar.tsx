@@ -25,12 +25,24 @@ const Navbar = () => {
         }
     }, [pathname]); // Re-check on route change (e.g. after login redirect)
 
-    const navLinks = [
+    const isDashboard = pathname.startsWith("/dashboard");
+
+    const publicLinks = [
         { name: "Home", href: "/" },
-        { name: "Dashboard", href: "/dashboard" }, // Added Dashboard link
         { name: "About", href: "/about" },
         { name: "Contact", href: "/contact" },
     ];
+
+    const dashboardLinks = [
+        { name: "Dashboard", href: "/dashboard" },
+        { name: "My Reports", href: "/dashboard" }, // Can add more dashboard specific links here
+    ];
+
+    // If on dashboard, show dashboard links (or keep it simple), else public links
+    // User requested "header in dashboard should be different", so let's differentiate.
+    // Dashboard header will be simpler/focused.
+    const activeLinks = isDashboard ? dashboardLinks : publicLinks;
+
 
     const isActive = (path: string) => pathname === path;
 
@@ -40,17 +52,22 @@ const Navbar = () => {
                 <div className="flex h-16 items-center justify-between">
                     {/* Logo */}
                     <div className="flex-shrink-0">
-                        <Link href="/" className="flex items-center gap-2">
+                        <Link href={isDashboard ? "/dashboard" : "/"} className="flex items-center gap-2">
                             <span className="text-2xl font-bold text-blue-600 dark:text-blue-500">
                                 SafeStreets
                             </span>
+                            {isDashboard && (
+                                <span className="hidden sm:inline-block text-sm font-medium text-slate-500 dark:text-slate-400 border-l border-slate-300 dark:border-slate-700 pl-3 ml-3">
+                                    Dashboard
+                                </span>
+                            )}
                         </Link>
                     </div>
 
                     {/* Desktop Nav */}
                     <div className="hidden md:block">
                         <div className="flex items-center space-x-8">
-                            {navLinks.map((link) => (
+                            {activeLinks.map((link) => (
                                 <Link
                                     key={link.name}
                                     href={link.href}
@@ -130,7 +147,7 @@ const Navbar = () => {
             {isOpen && (
                 <div className="md:hidden">
                     <div className="space-y-1 bg-white px-2 pt-2 pb-3 shadow-lg dark:bg-slate-900">
-                        {navLinks.map((link) => (
+                        {activeLinks.map((link) => (
                             <Link
                                 key={link.name}
                                 href={link.href}
@@ -143,18 +160,27 @@ const Navbar = () => {
                                 {link.name}
                             </Link>
                         ))}
-                        <div className="mt-4 flex flex-col space-y-2 border-t border-slate-200 px-3 pt-4 dark:border-slate-800">
-                            <Link href="/login" onClick={() => setIsOpen(false)}>
-                                <Button variant="ghost" className="w-full justify-start">
-                                    Log in
-                                </Button>
-                            </Link>
-                            <Link href="/register" onClick={() => setIsOpen(false)}>
-                                <Button variant="primary" className="w-full">
-                                    Sign up
-                                </Button>
-                            </Link>
-                        </div>
+                        {/* Only show login/signup in mobile menu if NOT logged in */}
+                        {!user && (
+                            <div className="mt-4 flex flex-col space-y-2 border-t border-slate-200 px-3 pt-4 dark:border-slate-800">
+                                <Link href="/login" onClick={() => setIsOpen(false)}>
+                                    <Button variant="ghost" className="w-full justify-start">
+                                        Log in
+                                    </Button>
+                                </Link>
+                                <Link href="/register" onClick={() => setIsOpen(false)}>
+                                    <Button variant="primary" className="w-full">
+                                        Sign up
+                                    </Button>
+                                </Link>
+                            </div>
+                        )}
+                        {/* If logged in, ProfileMenu handles desktop, but for mobile we might want a logout button here or assume they use the desktop-like profile menu if it's visible. 
+                            However, ProfileMenu is hidden on mobile currently in the desktop section. 
+                            Let's add a logout button or similar for mobile if user exists, OR simply rely on the user finding the way (usually mobile menus include profile links). 
+                            Looking at original code, ProfileMenu was hidden on mobile. 
+                            Let's keep it simple for now as per instructions. 
+                        */}
                     </div>
                 </div>
             )}

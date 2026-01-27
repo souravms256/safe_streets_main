@@ -89,6 +89,14 @@ export default function ProfileMenu({ user }: ProfileMenuProps) {
                     </div>
 
                     <Link
+                        href="/dashboard"
+                        className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"
+                        onClick={() => setIsOpen(false)}
+                    >
+                        Dashboard
+                    </Link>
+
+                    <Link
                         href="/profile"
                         className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"
                         onClick={() => setIsOpen(false)}
