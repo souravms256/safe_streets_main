@@ -34,6 +34,8 @@ interface ViolationsTableProps {
 
 export default function ViolationsTable({ violations, onDelete }: ViolationsTableProps) {
     const [selectedViolation, setSelectedViolation] = useState<Violation | null>(null);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [currentPage, setCurrentPage] = useState(1);
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
     async function handleDelete(e: React.MouseEvent, id: string) {
@@ -49,6 +51,25 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
             }
         }
     }
+
+    // Reset to page 1 when items per page changes
+    const handleLimitChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setItemsPerPage(Number(e.target.value));
+        setCurrentPage(1);
+    };
+
+    const totalPages = Math.ceil(violations.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedViolations = violations.slice(startIndex, startIndex + itemsPerPage);
+
+    const handlePrevious = () => {
+        if (currentPage > 1) setCurrentPage(currentPage - 1);
+    };
+
+    const handleNext = () => {
+        if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+    };
+
     function openModal(violation: Violation) {
         setSelectedViolation(violation);
     }
@@ -60,10 +81,23 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
     return (
         <>
             <div className="overflow-hidden rounded-xl bg-white shadow-sm dark:bg-slate-900">
-                <div className="border-b border-slate-200 px-6 py-4 dark:border-slate-800">
+                <div className="border-b border-slate-200 px-6 py-4 dark:border-slate-800 flex items-center justify-between">
                     <h3 className="text-base font-semibold leading-6 text-slate-900 dark:text-white">
                         Reported Violations
                     </h3>
+                    <div className="flex items-center space-x-2 text-sm">
+                        <span className="text-slate-500 dark:text-slate-400">Show</span>
+                        <select
+                            value={itemsPerPage}
+                            onChange={handleLimitChange}
+                            className="rounded-md border-slate-300 bg-transparent py-1 pl-2 pr-8 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-slate-700 dark:text-white"
+                        >
+                            <option value={10}>10</option>
+                            <option value={20}>20</option>
+                            <option value={50}>50</option>
+                        </select>
+                        <span className="text-slate-500 dark:text-slate-400">entries</span>
+                    </div>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
@@ -90,7 +124,7 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200 bg-white dark:divide-slate-800 dark:bg-slate-900">
-                            {violations.map((violation) => (
+                            {paginatedViolations.map((violation) => (
                                 <tr key={violation.id}>
                                     <td className="whitespace-nowrap px-6 py-4">
                                         <div className="h-16 w-16 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
@@ -170,6 +204,30 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                         </tbody>
                     </table>
                 </div>
+                {/* Pagination Footer */}
+                {violations.length > 0 && (
+                    <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-6 py-3 dark:border-slate-800 dark:bg-slate-900">
+                        <div className="text-sm text-slate-500 dark:text-slate-400">
+                            Showing <span className="font-medium">{startIndex + 1}</span> to <span className="font-medium">{Math.min(startIndex + itemsPerPage, violations.length)}</span> of <span className="font-medium">{violations.length}</span> results
+                        </div>
+                        <div className="flex space-x-2">
+                            <button
+                                onClick={handlePrevious}
+                                disabled={currentPage === 1}
+                                className="rounded px-3 py-1 text-sm font-medium text-slate-600 hover:bg-slate-200 disabled:opacity-50 dark:text-slate-300 dark:hover:bg-slate-800"
+                            >
+                                Previous
+                            </button>
+                            <button
+                                onClick={handleNext}
+                                disabled={currentPage === totalPages}
+                                className="rounded px-3 py-1 text-sm font-medium text-slate-600 hover:bg-slate-200 disabled:opacity-50 dark:text-slate-300 dark:hover:bg-slate-800"
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Details Modal */}
