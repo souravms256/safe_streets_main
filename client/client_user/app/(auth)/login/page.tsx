@@ -6,10 +6,12 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import api from "@/services/api";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [showPassword, setShowPassword] = useState(false);
     const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -68,11 +70,24 @@ export default function LoginPage() {
                         <Input
                             id="password"
                             name="password"
-                            type="password"
+                            type={showPassword ? "text" : "password"}
                             autoComplete="current-password"
                             required
                             label="Password"
                             placeholder="••••••••"
+                            suffix={
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                                >
+                                    {showPassword ? (
+                                        <EyeOff className="h-5 w-5" />
+                                    ) : (
+                                        <Eye className="h-5 w-5" />
+                                    )}
+                                </button>
+                            }
                         />
                     </div>
 
