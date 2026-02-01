@@ -51,6 +51,8 @@ async def report_violation(
         public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(file_name)
         
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         print(f"Storage upload failed: {e}")
         raise HTTPException(status_code=500, detail=f"Image upload failed: {str(e)}")
 
@@ -61,15 +63,18 @@ async def report_violation(
         "violation_type": detected_type,
         "status": "Under Review",
         "location": f"{latitude}, {longitude}",
-        "address": address,
+        # "address": address, # Removed because column missing in DB
         "timestamp": timestamp,
-        "details": details,
+        "details": {**details, "address": address},
         "created_at": datetime.utcnow().isoformat()
     }
     
     try:
         result = supabase.table("violations").insert(violation_data).execute()
     except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"Database insert failed: {e}")
         raise HTTPException(status_code=500, detail=f"Database insert failed: {str(e)}")
 
     return {

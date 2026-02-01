@@ -14,8 +14,15 @@ def get_address(lat: float, lon: float) -> str:
         response = requests.get(url, headers=headers, timeout=10)
         if response.status_code == 200:
             data = response.json()
-            return data.get("display_name", f"{lat}, {lon}")
-        return f"{lat}, {lon}"
+            address = data.get("display_name")
+            if address:
+                return address
+            else:
+                print(f"Geocoding returned 200 but no display_name: {data}")
+                return f"{lat}, {lon}"
+        else:
+            print(f"Geocoding failed with status {response.status_code}: {response.text}")
+            return f"{lat}, {lon}"
     except Exception as e:
-        print(f"Geocoding error: {e}")
+        print(f"Geocoding exception: {e}")
         return f"{lat}, {lon}"

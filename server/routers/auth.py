@@ -46,24 +46,29 @@ def signup(payload: SignupRequest):
 # ---------------------- Login ----------------------
 @router.post("/login")
 def login(payload: LoginRequest, request: Request):
-    user = supabase.table("profiles").select("*").eq("email", payload.email).single().execute()
-    if not user.data:
+    result = supabase.table("profiles").select("*").eq("email", payload.email).execute()
+    if not result.data:
         raise HTTPException(status_code=404, detail="User not found")
+        
+    user_data = result.data[0]
 
-    if not verify_password(payload.password, user.data["password_hash"]):
+    if user_data.get("is_banned"):
+        raise HTTPException(status_code=403, detail="Your account has been actively suspended. Please contact support.")
+
+    if not verify_password(payload.password, user_data["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    access = create_access_token({"user_id": user.data["id"], "role": user.data["role"]})
+    access = create_access_token({"user_id": user_data["id"], "role": user_data["role"]})
     refresh, exp = create_refresh_token()
 
     supabase.table("refresh_tokens").insert({
-        "user_id": user.data["id"],
+        "user_id": user_data["id"],
         "refresh_token": refresh,
         "expires_at": exp.isoformat()
     }).execute()
 
     supabase.table("auth_logs").insert({
-        "user_id": user.data["id"],
+        "user_id": user_data["id"],
         "action": "login",
         "ip": request.client.host,
         "created_at": datetime.utcnow().isoformat()

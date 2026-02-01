@@ -14,3 +14,14 @@ def me(current_user=Depends(get_current_user)):
         "id, full_name, email, dob, role, created_at"
     ).eq("id", current_user["user_id"]).single().execute().data
     return user
+
+@router.get("/leaderboard")
+def get_leaderboard(current_user=Depends(get_current_user)):
+    """
+    Get top 10 users by points.
+    """
+    # Note: 'points' column must exist
+    users = supabase.table("profiles").select(
+        "full_name, points"
+    ).order("points", desc=True).limit(10).execute().data
+    return users

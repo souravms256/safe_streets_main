@@ -29,22 +29,36 @@ class ViolationDetector:
                     data = response.json()
                     
                     # Logic to determine violation type from the specific API response
-                    # Response format: {'helmet_violations': 0, 'triple_riding': False, ...}
+                    # New Response format: {'violations': {'helmet_violations': 0, 'triple_riding': False}, ...}
                     
+                    violations_data = data.get("violations", {})
                     violations = []
                     
                     # Check for Triple Riding
-                    if data.get("triple_riding") is True:
+                    if violations_data.get("triple_riding") is True:
                          violations.append("Triple Riding")
                     
                     # Check for Helmet Violations
-                    if data.get("helmet_violations", 0) > 0:
+                    if violations_data.get("helmet_violations", 0) > 0:
                         violations.append("Helmet Violation")
 
                     if not violations:
                         violation_type = "No Violation"
                     else:
                         violation_type = ", ".join(violations)
+                        
+                    # Config parsing for Frontend
+                    # Frontend expects: helmet_violations, triple_riding, rider_count at top level of details
+                    data["helmet_violations"] = violations_data.get("helmet_violations", 0)
+                    data["triple_riding"] = violations_data.get("triple_riding", False)
+                    data["rider_count"] = data.get("details", {}).get("max_riders_on_bike", 0) # Map from app.py response
+                    
+                    # Also flatten detections for easier access if needed, though frontend iterates data.detections (which exists in app.py resp)
+                    # app.py structure: "detections": {"helmets": [...]}
+                    # frontend expects: "detections": [...]
+                    # Let's map detections.helmets -> detections
+                    if "detections" in data and isinstance(data["detections"], dict):
+                         data["detections"] = data["detections"].get("helmets", [])
                         
                     # Return both the label and the full data object
                     return violation_type, data
