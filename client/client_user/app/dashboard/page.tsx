@@ -89,13 +89,13 @@ export default function DashboardPage() {
     ];
 
     return (
-        <div className="min-h-screen bg-slate-50 py-8 dark:bg-slate-950">
+        <div className="min-h-screen bg-slate-50 py-4 sm:py-8 dark:bg-slate-950">
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"
             >
-                <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                         <div className="flex items-center gap-2 mb-1">
                             <LayoutDashboard className="w-6 h-6 text-blue-600 dark:text-blue-400" />
@@ -107,7 +107,7 @@ export default function DashboardPage() {
                             Welcome back, <span className="font-semibold text-slate-900 dark:text-slate-100">{user?.full_name || "User"}</span>
                         </p>
                     </div>
-                    <Link href="/report">
+                    <Link href="/report" className="hidden sm:block">
                         <Button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white gap-2 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-blue-500/20">
                             <Plus className="w-4 h-4" />
                             New Report
@@ -119,14 +119,14 @@ export default function DashboardPage() {
                     variants={container}
                     initial="hidden"
                     animate="show"
-                    className="grid grid-cols-1 gap-6 md:grid-cols-3"
+                    className="grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-3"
                 >
                     {stats.map((stat, index) => (
                         <motion.div
                             key={index}
                             variants={item}
                             whileHover={{ y: -5 }}
-                            className="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm dark:bg-slate-900 border border-slate-100 dark:border-slate-800 transition-all hover:shadow-xl dark:hover:border-slate-700"
+                            className={`group relative overflow-hidden rounded-2xl bg-white p-4 sm:p-6 shadow-sm dark:bg-slate-900 border border-slate-100 dark:border-slate-800 transition-all hover:shadow-xl dark:hover:border-slate-700 ${index === 0 ? 'col-span-2 md:col-span-1' : ''}`}
                         >
                             <div className="flex items-center justify-between">
                                 <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">
@@ -179,6 +179,18 @@ export default function DashboardPage() {
                         <ViolationsTable violations={violations} onDelete={handleDelete} />
                     </motion.div>
                 )}
+                {/* Floating Action Button (Mobile Only) */}
+                <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="fixed bottom-24 right-6 md:hidden z-40"
+                >
+                    <Link href="/report">
+                        <button className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 shadow-lg shadow-blue-600/30 text-white transition-transform active:scale-90">
+                            <Plus className="h-8 w-8" />
+                        </button>
+                    </Link>
+                </motion.div>
             </motion.div>
         </div>
     );

@@ -81,13 +81,13 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
 
     return (
         <>
-            <div className="overflow-hidden rounded-xl bg-white shadow-sm dark:bg-slate-900">
+            <div className="overflow-hidden rounded-xl bg-white shadow-sm dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
                 <div className="border-b border-slate-200 px-6 py-4 dark:border-slate-800 flex items-center justify-between">
                     <h3 className="text-base font-semibold leading-6 text-slate-900 dark:text-white">
                         Reported Violations
                     </h3>
                     <div className="flex items-center space-x-2 text-sm">
-                        <span className="text-slate-500 dark:text-slate-400">Show</span>
+                        <span className="text-slate-500 dark:text-slate-400 hidden sm:inline">Show</span>
                         <select
                             value={itemsPerPage}
                             onChange={handleLimitChange}
@@ -97,10 +97,80 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                             <option value={20}>20</option>
                             <option value={50}>50</option>
                         </select>
-                        <span className="text-slate-500 dark:text-slate-400">entries</span>
+                        <span className="text-slate-500 dark:text-slate-400 hidden sm:inline">entries</span>
                     </div>
                 </div>
-                <div className="overflow-x-auto">
+
+                {/* Mobile Card View (Visible on small screens) */}
+                <div className="block md:hidden">
+                    <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {paginatedViolations.map((violation) => (
+                            <li key={violation.id} className="p-4 active:bg-slate-50 dark:active:bg-slate-800/50 transition-colors">
+                                <div className="flex gap-4">
+                                    {/* Thumbnail */}
+                                    <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800">
+                                        <img
+                                            src={violation.image_url}
+                                            alt="Proof"
+                                            className="h-full w-full object-cover"
+                                            loading="lazy"
+                                        />
+                                    </div>
+
+                                    {/* Content */}
+                                    <div className="flex-1 min-w-0 flex flex-col justify-between">
+                                        <div>
+                                            <div className="flex items-start justify-between gap-2">
+                                                <h4 className="font-semibold text-slate-900 dark:text-white text-sm line-clamp-1">
+                                                    {violation.violation_type.split(',')[0]}
+                                                    {violation.violation_type.includes(',') && <span className="text-xs text-slate-500 font-normal"> +more</span>}
+                                                </h4>
+                                                <span
+                                                    className={`flex-shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium border ${violation.status === "Verified"
+                                                        ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800"
+                                                        : violation.status === "Under Review"
+                                                            ? "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800"
+                                                            : "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800"
+                                                        }`}
+                                                >
+                                                    {violation.status}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">
+                                                {violation.address || violation.location}
+                                            </p>
+                                        </div>
+
+                                        <div className="flex items-center justify-between mt-3">
+                                            <span className="text-xs text-slate-400">
+                                                {new Date(violation.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                            </span>
+
+                                            <div className="flex items-center gap-3">
+                                                <button
+                                                    onClick={() => openModal(violation)}
+                                                    className="text-xs font-medium text-blue-600 dark:text-blue-400"
+                                                >
+                                                    View Details
+                                                </button>
+                                                <button
+                                                    onClick={(e) => handleDelete(e, violation.id)}
+                                                    disabled={isDeleting === violation.id}
+                                                    className="text-xs font-medium text-red-600 dark:text-red-400 disabled:opacity-50"
+                                                >
+                                                    {isDeleting === violation.id ? "..." : "Delete"}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+
+                {/* Desktop Table View (Hidden on small screens) */}
+                <div className="hidden md:block overflow-x-auto">
                     <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
                         <thead className="bg-slate-50 dark:bg-slate-800">
                             <tr>

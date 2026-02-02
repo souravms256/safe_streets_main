@@ -21,57 +21,38 @@ export default function ProfilePage() {
     return (
         <div className="min-h-[calc(100vh-4rem)] bg-slate-50 py-12 dark:bg-slate-950 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-3xl">
-                <div className="overflow-hidden bg-white shadow sm:rounded-lg dark:bg-slate-900">
-                    <div className="px-4 py-5 sm:px-6">
-                        <h3 className="text-lg font-medium leading-6 text-slate-900 dark:text-white">
-                            User Profile
-                        </h3>
-                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                            Personal details and account information.
-                        </p>
-                    </div>
-                    <div className="border-t border-slate-200 dark:border-slate-800">
-                        <dl>
-                            <div className="bg-slate-50 px-4 py-5 dark:bg-slate-900 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                <dt className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                                    Full name
-                                </dt>
-                                <dd className="mt-1 text-sm text-slate-900 dark:text-white sm:col-span-2 sm:mt-0">
+                <div className="overflow-hidden bg-white shadow-sm ring-1 ring-slate-900/5 sm:rounded-xl dark:bg-slate-900 dark:ring-slate-800">
+                    <div className="px-4 py-6 sm:px-6">
+                        <div className="flex items-center gap-4">
+                            <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-2xl font-bold dark:bg-blue-900/30 dark:text-blue-400">
+                                {user.full_name?.charAt(0) || "U"}
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold leading-7 text-slate-900 dark:text-white">
                                     {user.full_name}
-                                </dd>
-                            </div>
-                            <div className="bg-white px-4 py-5 dark:bg-slate-950 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                <dt className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                                    Email address
-                                </dt>
-                                <dd className="mt-1 text-sm text-slate-900 dark:text-white sm:col-span-2 sm:mt-0">
+                                </h3>
+                                <p className="text-sm text-slate-500 dark:text-slate-400">
                                     {user.email}
-                                </dd>
+                                </p>
                             </div>
-                            <div className="bg-slate-50 px-4 py-5 dark:bg-slate-900 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                <dt className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                                    Role
-                                </dt>
-                                <dd className="mt-1 text-sm text-slate-900 dark:text-white sm:col-span-2 sm:mt-0 uppercase">
-                                    {user.role}
-                                </dd>
-                            </div>
-                            <div className="bg-white px-4 py-5 dark:bg-slate-950 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                <dt className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                                    Date of Birth
-                                </dt>
-                                <dd className="mt-1 text-sm text-slate-900 dark:text-white sm:col-span-2 sm:mt-0">
-                                    {user.dob || "Not provided"}
-                                </dd>
-                            </div>
-                            <div className="bg-slate-50 px-4 py-5 dark:bg-slate-900 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                <dt className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                                    Joined
-                                </dt>
-                                <dd className="mt-1 text-sm text-slate-900 dark:text-white sm:col-span-2 sm:mt-0">
-                                    {new Date(user.created_at).toLocaleDateString()}
-                                </dd>
-                            </div>
+                        </div>
+                    </div>
+                    <div className="border-t border-slate-100 dark:border-slate-800">
+                        <dl className="divide-y divide-slate-100 dark:divide-slate-800">
+                            {[
+                                { label: "Role", value: user.role, uppercase: true },
+                                { label: "Date of Birth", value: user.dob || "Not provided" },
+                                { label: "Member Since", value: new Date(user.created_at).toLocaleDateString() }
+                            ].map((item, idx) => (
+                                <div key={idx} className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                    <dt className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                                        {item.label}
+                                    </dt>
+                                    <dd className={`mt-1 text-sm text-slate-900 dark:text-white sm:col-span-2 sm:mt-0 ${item.uppercase ? 'uppercase' : ''}`}>
+                                        {item.value}
+                                    </dd>
+                                </div>
+                            ))}
                         </dl>
                     </div>
                 </div>

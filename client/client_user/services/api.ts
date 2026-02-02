@@ -1,7 +1,8 @@
 import axios from "axios";
 
 const api = axios.create({
-    baseURL: "http://localhost:8000",
+    // Use local IP for mobile development
+    baseURL: "http://192.168.0.100:8000",
     headers: {
         "Content-Type": "application/json",
     },

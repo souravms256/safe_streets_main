@@ -165,7 +165,7 @@ export default function MapPage() {
                                 initial={{ x: -400, opacity: 0 }}
                                 animate={{ x: 0, opacity: 1 }}
                                 exit={{ x: -400, opacity: 0 }}
-                                className="w-80 flex-shrink-0 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl p-6 overflow-y-auto z-20"
+                                className="absolute inset-y-0 left-0 z-30 h-full w-full bg-white p-6 shadow-xl dark:bg-slate-900 md:static md:w-80 md:rounded-3xl md:border md:border-slate-200 md:dark:border-slate-800"
                             >
                                 <div className="flex items-center justify-between mb-6">
                                     <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">

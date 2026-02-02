@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Button } from "./ui/Button";
 
 import ProfileMenu from "./ProfileMenu";
@@ -12,6 +12,14 @@ const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [user, setUser] = useState<any>(null);
     const pathname = usePathname();
+    const router = useRouter();
+
+    const handleLogout = () => {
+        localStorage.removeItem("access_token");
+        setUser(null);
+        router.push("/login");
+        setIsOpen(false);
+    };
 
     useEffect(() => {
         // Check localStorage for access_token
@@ -46,7 +54,7 @@ const Navbar = () => {
     const isActive = (path: string) => pathname === path;
 
     return (
-        <nav className="fixed top-0 left-0 right-0 z-[2000] border-b border-slate-200 bg-white/80 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/80">
+        <nav className="fixed top-0 left-0 right-0 z-[2000] border-b border-slate-200 bg-white/80 backdrop-blur-md pt-[env(safe-area-inset-top)] dark:border-slate-800 dark:bg-slate-900/80">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div className="flex h-16 items-center justify-between">
                     {/* Logo */}
@@ -155,7 +163,22 @@ const Navbar = () => {
                             </Link>
                         ))}
                         {/* Only show login/signup in mobile menu if NOT logged in */}
-                        {!user && (
+                        {user ? (
+                            <div className="mt-4 flex flex-col space-y-2 border-t border-slate-200 px-3 pt-4 dark:border-slate-800">
+                                <Link href="/profile" onClick={() => setIsOpen(false)}>
+                                    <Button variant="ghost" className="w-full justify-start text-left">
+                                        My Profile
+                                    </Button>
+                                </Link>
+                                <Button
+                                    variant="ghost"
+                                    onClick={handleLogout}
+                                    className="w-full justify-start text-left text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
+                                >
+                                    Sign out
+                                </Button>
+                            </div>
+                        ) : (
                             <div className="mt-4 flex flex-col space-y-2 border-t border-slate-200 px-3 pt-4 dark:border-slate-800">
                                 <Link href="/login" onClick={() => setIsOpen(false)}>
                                     <Button variant="ghost" className="w-full justify-start">
@@ -169,12 +192,6 @@ const Navbar = () => {
                                 </Link>
                             </div>
                         )}
-                        {/* If logged in, ProfileMenu handles desktop, but for mobile we might want a logout button here or assume they use the desktop-like profile menu if it's visible. 
-                            However, ProfileMenu is hidden on mobile currently in the desktop section. 
-                            Let's add a logout button or similar for mobile if user exists, OR simply rely on the user finding the way (usually mobile menus include profile links). 
-                            Looking at original code, ProfileMenu was hidden on mobile. 
-                            Let's keep it simple for now as per instructions. 
-                        */}
                     </div>
                 </div>
             )}
