@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/services/api";
 import { Button } from "@/components/ui/Button";
+import toast from "react-hot-toast";
+import { compressImage, needsCompression, blobToFile, getFileSizeMB } from "@/services/imageCompression";
 
 export default function ReportPage() {
     const router = useRouter();
@@ -23,7 +25,7 @@ export default function ReportPage() {
 
     const handleGetLocation = () => {
         if (!navigator.geolocation) {
-            alert("Geolocation is not supported by your browser");
+            toast.error("Geolocation is not supported by your browser");
             return;
         }
 
@@ -38,7 +40,7 @@ export default function ReportPage() {
             },
             (error) => {
                 console.error("Error getting location:", error);
-                alert("Unable to retrieve your location");
+                toast.error("Unable to retrieve your location");
                 setLoading(false);
             }
         );
@@ -48,13 +50,29 @@ export default function ReportPage() {
         e.preventDefault();
 
         if (!file || !location) {
-            alert("Please provide both an image and your location.");
+            toast.error("Please provide both an image and your location.");
             return;
         }
 
         setAnalyzing(true);
+
+        // Compress image if needed
+        let uploadFile: File | Blob = file;
+        if (needsCompression(file)) {
+            try {
+                const originalSize = getFileSizeMB(file);
+                toast.loading("Compressing image...", { id: "compress" });
+                const compressedBlob = await compressImage(file);
+                uploadFile = blobToFile(compressedBlob, file.name);
+                const newSize = getFileSizeMB(uploadFile);
+                toast.success(`Compressed: ${originalSize.toFixed(1)}MB → ${newSize.toFixed(1)}MB`, { id: "compress" });
+            } catch (err) {
+                console.warn("Compression failed, using original:", err);
+            }
+        }
+
         const formData = new FormData();
-        formData.append("file", file);
+        formData.append("file", uploadFile);
         formData.append("latitude", location.lat.toString());
         formData.append("longitude", location.lng.toString());
         formData.append("timestamp", new Date().toISOString());
@@ -67,12 +85,12 @@ export default function ReportPage() {
             });
 
             const { detected_type } = response.data;
-            alert(`Report Submitted! AI Detected: ${detected_type}`);
+            toast.success(`Report Submitted! AI Detected: ${detected_type}`);
             router.push("/dashboard");
 
         } catch (error) {
             console.error("Submission failed:", error);
-            alert("Failed to submit report. Please try again.");
+            toast.error("Failed to submit report. Please try again.");
         } finally {
             setAnalyzing(false);
         }

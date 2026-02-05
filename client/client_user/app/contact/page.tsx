@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import toast from "react-hot-toast";
 
 export default function ContactPage() {
     const [isLoading, setIsLoading] = useState(false);
@@ -13,7 +14,7 @@ export default function ContactPage() {
         // Simulate submission
         setTimeout(() => {
             setIsLoading(false);
-            alert("Message sent! (Simulation)");
+            toast.success("Message sent successfully!");
         }, 1500);
     };
 

@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Body
+from fastapi import APIRouter, Depends, HTTPException, Body, Query
 from core.dependencies import get_current_admin
 from utils.supabase_client import supabase
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timedelta
+from math import ceil
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -115,14 +116,50 @@ def _get_reports_by_type():
     return [{"name": k, "value": v} for k, v in counts.items()]
 
 @router.get("/violations")
-def get_all_violations(admin=Depends(get_current_admin)):
+def get_all_violations(
+    page: int = Query(1, ge=1, description="Page number"),
+    limit: int = Query(20, ge=1, le=100, description="Items per page"),
+    status: Optional[str] = Query(None, description="Filter by status"),
+    admin=Depends(get_current_admin)
+):
     """
-    Get all violations for table view.
+    Get all violations with server-side pagination.
     """
-    # Fetch all fields, order by newest.
-    # In production, implement pagination here (page & limit query params).
-    violations = supabase.table("violations").select("*, profiles(full_name, email)").order("created_at", desc=True).execute().data
-    return violations
+    try:
+        # Build query
+        query = supabase.table("violations").select("*, profiles(full_name, email)", count="exact")
+        
+        # Apply filters
+        if status:
+            query = query.eq("status", status)
+        
+        # Get total count first
+        count_result = query.execute()
+        total = count_result.count or 0
+        
+        # Calculate pagination
+        offset = (page - 1) * limit
+        total_pages = ceil(total / limit) if total > 0 else 1
+        
+        # Fetch paginated data
+        violations = supabase.table("violations").select("*, profiles(full_name, email)")
+        if status:
+            violations = violations.eq("status", status)
+        violations = violations.order("created_at", desc=True).range(offset, offset + limit - 1).execute().data
+        
+        return {
+            "data": violations,
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total": total,
+                "total_pages": total_pages,
+                "has_next": page < total_pages,
+                "has_prev": page > 1
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.put("/violations/{violation_id}/status")
 def update_violation_status(violation_id: str, update: StatusUpdate, admin=Depends(get_current_admin)):

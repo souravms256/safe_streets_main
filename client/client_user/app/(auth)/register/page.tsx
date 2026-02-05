@@ -7,18 +7,49 @@ import api from "@/services/api";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Eye, EyeOff } from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function RegisterPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [errors, setErrors] = useState<{ email?: string; password?: string; name?: string }>({});
 
     const router = useRouter();
 
+    const validateForm = (formData: FormData): boolean => {
+        const newErrors: { email?: string; password?: string; name?: string } = {};
+        const email = formData.get("email") as string;
+        const password = formData.get("password") as string;
+        const name = formData.get("name") as string;
+
+        if (!name || name.trim().length < 2) {
+            newErrors.name = "Name must be at least 2 characters";
+        }
+
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            newErrors.email = "Please enter a valid email address";
+        }
+
+        if (!password || password.length < 6) {
+            newErrors.password = "Password must be at least 6 characters";
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setIsLoading(true);
 
         const formData = new FormData(e.currentTarget as HTMLFormElement);
+
+        if (!validateForm(formData)) {
+            toast.error("Please fix the errors below");
+            return;
+        }
+
+        setIsLoading(true);
+
         const full_name = formData.get("name") as string;
         const email = formData.get("email") as string;
         const password = formData.get("password") as string;
@@ -34,11 +65,11 @@ export default function RegisterPage() {
                 role: "user"
             });
 
-            alert("Account created successfully! Please log in.");
+            toast.success("Account created successfully! Please log in.");
             router.push("/login");
         } catch (error) {
             console.error("Signup failed:", error);
-            alert("Signup failed. Please try again.");
+            toast.error("Signup failed. Please try again.");
         } finally {
             setIsLoading(false);
         }
@@ -65,6 +96,7 @@ export default function RegisterPage() {
                             required
                             label="Full Name"
                             placeholder="John Doe"
+                            error={errors.name}
                         />
                         <Input
                             id="dob"
@@ -81,6 +113,7 @@ export default function RegisterPage() {
                             required
                             label="Email address"
                             placeholder="you@example.com"
+                            error={errors.email}
                         />
                         <Input
                             id="password"
@@ -90,6 +123,7 @@ export default function RegisterPage() {
                             required
                             label="Password"
                             placeholder="••••••••"
+                            error={errors.password}
                             suffix={
                                 <button
                                     type="button"

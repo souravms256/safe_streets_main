@@ -6,6 +6,8 @@ import api from "@/services/api";
 import { Button } from "@/components/ui/Button";
 import ViolationsTable from "@/components/ViolationsTable";
 import { motion } from "framer-motion";
+import toast from "react-hot-toast";
+import { DashboardSkeleton } from "@/components/ui/Skeleton";
 import {
     FileText,
     CheckCircle2,
@@ -47,15 +49,7 @@ export default function DashboardPage() {
             .finally(() => setLoading(false));
     }, []);
 
-    if (loading) return (
-        <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
-            <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                className="h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full"
-            />
-        </div>
-    );
+    if (loading) return <DashboardSkeleton />;
 
     const handleDelete = async (id: string) => {
         try {
@@ -63,7 +57,7 @@ export default function DashboardPage() {
             setViolations((prev) => prev.filter((v) => v.id !== id));
         } catch (error) {
             console.error("Failed to delete violation:", error);
-            alert("Failed to delete report. Please try again.");
+            toast.error("Failed to delete report. Please try again.");
         }
     };
 
