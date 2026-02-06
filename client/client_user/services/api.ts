@@ -1,8 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-    // Use local IP for mobile development
-    baseURL: "http://192.168.0.100:8000",
+    baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000",
     headers: {
         "Content-Type": "application/json",
     },

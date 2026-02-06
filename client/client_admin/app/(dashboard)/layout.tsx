@@ -1,16 +1,20 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 import {
     LayoutDashboard,
     AlertTriangle,
     Users,
-    Settings,
     LogOut,
-    ShieldCheck
+    ShieldCheck,
+    TrendingUp,
+    Activity,
+    Settings,
+    ChevronRight
 } from "lucide-react";
 
 export default function DashboardLayout({
@@ -20,9 +24,9 @@ export default function DashboardLayout({
 }) {
     const pathname = usePathname();
     const router = useRouter();
+    const [hoveredPath, setHoveredPath] = useState<string | null>(null);
 
     useEffect(() => {
-        // Basic protection: check if token exists
         const token = localStorage.getItem("admin_access_token");
         if (!token) {
             router.push("/login");
@@ -33,7 +37,6 @@ export default function DashboardLayout({
         { name: "Dashboard", href: "/", icon: LayoutDashboard },
         { name: "Violations", href: "/violations", icon: AlertTriangle },
         { name: "Users", href: "/users", icon: Users },
-        // { name: "Settings", href: "/settings", icon: Settings },
     ];
 
     const handleLogout = () => {
@@ -42,58 +45,115 @@ export default function DashboardLayout({
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex font-sans text-slate-900 dark:text-slate-50">
+        <div className="min-h-screen bg-[#050505] flex selection:bg-blue-500/30">
+            {/* Animated Background Mesh */}
+            <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+                <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-600/5 blur-[120px]" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-purple-600/5 blur-[120px]" />
+            </div>
+
             {/* Sidebar */}
-            <aside className="fixed inset-y-0 left-0 z-50 w-64 border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 hidden md:flex flex-col">
-                <div className="flex h-16 items-center border-b border-slate-200 px-6 dark:border-slate-800">
-                    <ShieldCheck className="mr-2 h-6 w-6 text-slate-900 dark:text-white" />
-                    <span className="text-lg font-bold">SafeStreets Admin</span>
+            <aside className="fixed inset-y-0 left-0 z-50 w-72 hidden md:flex flex-col border-r border-white/5 bg-black/60 backdrop-blur-2xl">
+                {/* Logo Area */}
+                <div className="flex items-center gap-4 px-6 h-24 relative overflow-hidden group">
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                    <div className="relative flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/25 group-hover:scale-105 transition-transform duration-300">
+                        <ShieldCheck className="h-6 w-6 text-white" />
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="text-xl font-bold text-white tracking-tight leading-none group-hover:text-blue-100 transition-colors">SafeStreets</span>
+                        <span className="text-xs font-medium text-blue-400 mt-1 uppercase tracking-wider">Admin Portal</span>
+                    </div>
                 </div>
-                <div className="flex-1 overflow-y-auto py-4">
-                    <nav className="space-y-1 px-3">
+
+                {/* Navigation */}
+                <div className="flex-1 py-8 px-4 overflow-y-auto space-y-2">
+                    <p className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">Overview</p>
+                    <nav className="space-y-1">
                         {sidebarItems.map((item) => {
                             const isActive = pathname === item.href;
                             return (
                                 <Link
                                     key={item.href}
                                     href={item.href}
+                                    onMouseEnter={() => setHoveredPath(item.href)}
+                                    onMouseLeave={() => setHoveredPath(null)}
                                     className={cn(
-                                        "flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                                        "relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group",
                                         isActive
-                                            ? "bg-slate-900 text-white dark:bg-slate-50 dark:text-slate-900"
-                                            : "text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+                                            ? "text-white"
+                                            : "text-gray-400 hover:text-white"
                                     )}
                                 >
-                                    <item.icon className="mr-3 h-5 w-5" />
-                                    {item.name}
+                                    {/* Active/Hover Background */}
+                                    {isActive && (
+                                        <motion.div
+                                            layoutId="sidebar-active"
+                                            className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 border border-blue-500/10 rounded-xl"
+                                            initial={false}
+                                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                        />
+                                    )}
+                                    {hoveredPath === item.href && !isActive && (
+                                        <motion.div
+                                            layoutId="sidebar-hover"
+                                            className="absolute inset-0 bg-white/5 rounded-xl"
+                                            initial={false}
+                                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                        />
+                                    )}
+
+                                    {/* Icon & Text */}
+                                    <item.icon className={cn(
+                                        "relative z-10 h-5 w-5 transition-colors duration-300",
+                                        isActive ? "text-blue-400" : "group-hover:text-blue-400"
+                                    )} />
+                                    <span className="relative z-10 font-medium">{item.name}</span>
+
+                                    {isActive && (
+                                        <motion.div
+                                            layoutId="active-pill"
+                                            className="absolute right-3 w-1.5 h-1.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.5)]"
+                                        />
+                                    )}
                                 </Link>
                             );
                         })}
                     </nav>
+
+                    <div className="mt-8 px-4">
+                        <div className="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                    </div>
                 </div>
-                <div className="border-t border-slate-200 p-4 dark:border-slate-800">
+
+                {/* Logout */}
+                <div className="p-4 border-t border-white/5 bg-black/20">
                     <button
                         onClick={handleLogout}
-                        className="flex w-full items-center rounded-md px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                        className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-all group border border-transparent hover:border-white/5"
                     >
-                        <LogOut className="mr-3 h-5 w-5" />
-                        Sign Out
+                        <div className="flex items-center gap-3">
+                            <LogOut className="h-5 w-5 group-hover:text-rose-400 transition-colors" />
+                            <span className="font-medium text-sm">Sign Out</span>
+                        </div>
+                        <ChevronRight className="h-4 w-4 opacity-0 group-hover:opacity-100 text-gray-500 -translate-x-2 group-hover:translate-x-0 transition-all" />
                     </button>
                 </div>
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 md:pl-64">
-                <div className="min-h-full">
-                    {/* Header (Mobile mostly) */}
-                    <div className="sticky top-0 z-40 flex h-16 items-center gap-x-4 border-b border-slate-200 bg-white px-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:hidden">
-                        <ShieldCheck className="h-6 w-6" />
-                        <span className="font-bold">SafeStreets</span>
+            <main className="flex-1 md:ml-72 relative z-10">
+                {/* Mobile Header */}
+                <div className="sticky top-0 z-40 flex items-center gap-4 h-16 px-4 border-b border-white/5 bg-black/80 backdrop-blur-xl md:hidden">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600">
+                        <ShieldCheck className="h-4 w-4 text-white" />
                     </div>
+                    <span className="font-bold text-white">SafeStreets</span>
+                </div>
 
-                    <div className="p-4 sm:p-6 lg:p-8">
-                        {children}
-                    </div>
+                <div className="p-6 lg:p-10 max-w-7xl mx-auto">
+                    {children}
                 </div>
             </main>
         </div>
