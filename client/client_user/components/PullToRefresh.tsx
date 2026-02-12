@@ -84,33 +84,35 @@ export default function PullToRefresh({ children, onRefresh, disabled = false }:
     const progress = Math.min(pullDistance / THRESHOLD, 1);
 
     return (
-        <div ref={containerRef} className="relative md:hidden">
-            {/* Pull indicator */}
-            <div
-                className="absolute left-0 right-0 flex items-center justify-center overflow-hidden transition-opacity"
-                style={{
-                    height: `${pullDistance}px`,
-                    top: `-${pullDistance}px`,
-                    opacity: progress,
-                }}
-            >
+        <div ref={containerRef} className="relative">
+            {/* Pull indicator — only visible on mobile */}
+            {pullDistance > 0 && (
                 <div
-                    className={`flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-lg dark:bg-slate-800 ${isRefreshing ? "animate-spin" : ""
-                        }`}
+                    className="absolute left-0 right-0 z-10 flex items-center justify-center overflow-hidden transition-opacity md:hidden"
                     style={{
-                        transform: `rotate(${progress * 360}deg)`,
+                        height: `${pullDistance}px`,
+                        top: 0,
+                        opacity: progress,
                     }}
                 >
-                    <RefreshCw className="h-5 w-5 text-blue-500" />
+                    <div
+                        className={`flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-lg dark:bg-slate-800 ${isRefreshing ? "animate-spin" : ""
+                            }`}
+                        style={{
+                            transform: `rotate(${progress * 360}deg)`,
+                        }}
+                    >
+                        <RefreshCw className="h-5 w-5 text-blue-500" />
+                    </div>
                 </div>
-            </div>
+            )}
 
-            {/* Content with pull offset */}
+            {/* Content with pull offset on mobile only */}
             <div
-                className="transition-transform"
                 style={{
-                    transform: `translateY(${pullDistance}px)`,
+                    transform: pullDistance > 0 ? `translateY(${pullDistance}px)` : undefined,
                     transitionDuration: isPulling.current ? "0ms" : "300ms",
+                    transitionProperty: "transform",
                 }}
             >
                 {children}
