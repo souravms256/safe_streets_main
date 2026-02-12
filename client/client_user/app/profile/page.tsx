@@ -143,9 +143,9 @@ export default function ProfilePage() {
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-4">
             {/* Profile Header */}
-            <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 px-6 pb-12 pt-8 md:pt-12">
+            <div className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 px-6 pb-16 pt-8 md:pt-12">
                 {/* Background pattern */}
-                <div className="absolute inset-0 opacity-10">
+                <div className="absolute inset-0 overflow-hidden opacity-10">
                     <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-white/20" />
                     <div className="absolute -bottom-8 -left-8 h-32 w-32 rounded-full bg-white/10" />
                 </div>
@@ -276,8 +276,8 @@ export default function ProfilePage() {
                                 key={opt.value}
                                 onClick={() => setTheme(opt.value)}
                                 className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-all ${theme === opt.value
-                                        ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
-                                        : "text-slate-500 dark:text-slate-400"
+                                    ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
+                                    : "text-slate-500 dark:text-slate-400"
                                     }`}
                             >
                                 <opt.icon className="h-3.5 w-3.5" />

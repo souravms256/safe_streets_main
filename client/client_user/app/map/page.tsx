@@ -10,15 +10,16 @@ import {
     AlertCircle,
     Filter,
     Flame,
-    Layers,
     Search,
     ChevronRight,
     X,
     TrendingUp,
     MapPin,
-    ChevronUp,
-    ChevronDown
+    Settings,
+    List,
+    AlertTriangle
 } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 
@@ -346,6 +347,20 @@ export default function MapPage() {
                                 <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-3" />
                                 <p className="text-sm text-slate-500 font-medium">Loading map...</p>
                             </div>
+                        </div>
+                    ) : filteredViolations.length === 0 ? (
+                        <div className="flex h-full items-center justify-center bg-slate-50 dark:bg-slate-900">
+                            <EmptyState
+                                icon={AlertTriangle}
+                                title="No violations found"
+                                description="Try adjusting your filters or search area."
+                                actionLabel="Reset Filters"
+                                onAction={() => {
+                                    setSearchQuery("");
+                                    setSelectedType("All");
+                                    setDateRange("all");
+                                }}
+                            />
                         </div>
                     ) : (
                         <Map

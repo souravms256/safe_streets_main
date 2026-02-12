@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import api from "@/services/api";
 import { Button } from "@/components/ui/Button";
 import ViolationsTable from "@/components/ViolationsTable";
@@ -15,8 +16,11 @@ import {
     Clock,
     Plus,
     LayoutDashboard,
-    AlertCircle
+    AlertCircle,
+    TrendingUp,
+    CheckCircle
 } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 
 const container = {
     hidden: { opacity: 0 },
@@ -34,6 +38,7 @@ const item = {
 };
 
 export default function DashboardPage() {
+    const router = useRouter();
     const [user, setUser] = React.useState<{ full_name: string; role: string } | null>(null);
     const [violations, setViolations] = React.useState<any[]>([]);
     const [loading, setLoading] = React.useState(true);
@@ -160,14 +165,15 @@ export default function DashboardPage() {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ delay: 0.5 }}
-                            className="mt-8 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 p-12 text-center"
+                            className="mt-8 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50"
                         >
-                            <AlertCircle className="mb-4 h-12 w-12 text-slate-300 dark:text-slate-700" />
-                            <h3 className="text-lg font-medium text-slate-900 dark:text-white">No reports found</h3>
-                            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Get started by reporting your first traffic violation.</p>
-                            <Link href="/report" className="mt-4 text-blue-600 hover:text-blue-500 font-medium">
-                                Report a Violation &rarr;
-                            </Link>
+                            <EmptyState
+                                icon={AlertCircle}
+                                title="No reports found"
+                                description="Get started by reporting your first traffic violation to help make your community safer."
+                                actionLabel="New Report"
+                                onAction={() => router.push("/report")}
+                            />
                         </motion.div>
                     ) : (
                         <motion.div
