@@ -16,8 +16,8 @@ import {
     LogOut,
     FileText,
     MapPin,
-    Loader2,
 } from "lucide-react";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 interface UserProfile {
     full_name: string;
@@ -100,8 +100,36 @@ export default function ProfilePage() {
 
     if (loading) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
-                <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+            <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-4">
+                {/* Skeleton header */}
+                <div className="relative overflow-hidden bg-gradient-to-br from-slate-400 via-slate-500 to-slate-600 px-6 pb-12 pt-8 md:pt-12 animate-pulse">
+                    <div className="relative mx-auto max-w-lg flex flex-col items-center">
+                        <Skeleton className="h-20 w-20 rounded-full !bg-white/20 mb-4" />
+                        <Skeleton className="h-6 w-40 !bg-white/20" />
+                        <Skeleton className="h-4 w-48 mt-2 !bg-white/20" />
+                        <Skeleton className="h-6 w-20 mt-3 rounded-full !bg-white/20" />
+                    </div>
+                </div>
+                {/* Skeleton stats */}
+                <div className="mx-auto max-w-lg px-4 -mt-6">
+                    <div className="grid grid-cols-3 gap-3">
+                        {[1, 2, 3].map((i) => (
+                            <div key={i} className="rounded-2xl bg-white p-3 text-center shadow-lg dark:bg-slate-900">
+                                <Skeleton className="h-5 w-8 mx-auto" />
+                                <Skeleton className="h-3 w-12 mx-auto mt-2" />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                {/* Skeleton menu */}
+                <div className="mx-auto max-w-lg px-4 mt-6 space-y-4">
+                    {[1, 2, 3].map((i) => (
+                        <div key={i} className="rounded-2xl bg-white dark:bg-slate-900 p-4">
+                            <Skeleton className="h-4 w-32" />
+                            <Skeleton className="h-3 w-48 mt-2" />
+                        </div>
+                    ))}
+                </div>
             </div>
         );
     }

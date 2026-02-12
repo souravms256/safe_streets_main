@@ -6,6 +6,7 @@ import BottomNav from "@/components/BottomNav";
 import Footer from "@/components/Footer";
 import { Toaster } from "react-hot-toast";
 import Script from "next/script";
+import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -46,6 +47,7 @@ export default function RootLayout({
           <Footer />
         </div>
         <Toaster position="top-center" />
+        <ServiceWorkerRegistration />
       </body>
     </html>
   );

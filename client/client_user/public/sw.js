@@ -1,17 +1,16 @@
-const CACHE_NAME = 'safestreets-v1';
+const CACHE_NAME = 'safestreets-v2';
 const STATIC_ASSETS = [
     '/',
-    '/dashboard',
-    '/report',
-    '/map',
-    '/offline.html'
+    '/manifest.json',
+    '/icons/icon-192.png',
+    '/icons/icon-512.png',
+    '/offline',
 ];
 
-// Install event - cache static assets
+// Install event - pre-cache core static assets
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
-            console.log('[SW] Caching static assets');
             return cache.addAll(STATIC_ASSETS);
         })
     );
@@ -32,22 +31,45 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
 });
 
-// Fetch event - network first, fallback to cache
+// Fetch event - smart caching strategy
 self.addEventListener('fetch', (event) => {
     const { request } = event;
+    const url = new URL(request.url);
 
     // Skip non-GET requests
     if (request.method !== 'GET') return;
 
-    // Skip API requests - always go to network
-    if (request.url.includes('/api/') || request.url.includes(':8000')) {
+    // Skip API requests and external origins - always go to network
+    if (request.url.includes('/api/') || request.url.includes(':8000') || url.origin !== self.location.origin) {
         return;
     }
 
+    // Navigation requests — network first, cache fallback, offline page last resort
+    if (request.mode === 'navigate') {
+        event.respondWith(
+            fetch(request)
+                .then((response) => {
+                    if (response.ok) {
+                        const responseClone = response.clone();
+                        caches.open(CACHE_NAME).then((cache) => {
+                            cache.put(request, responseClone);
+                        });
+                    }
+                    return response;
+                })
+                .catch(() => {
+                    return caches.match(request).then((cached) => {
+                        return cached || caches.match('/offline');
+                    });
+                })
+        );
+        return;
+    }
+
+    // Static assets — stale-while-revalidate
     event.respondWith(
-        fetch(request)
-            .then((response) => {
-                // Clone and cache successful responses
+        caches.match(request).then((cached) => {
+            const networkFetch = fetch(request).then((response) => {
                 if (response.ok) {
                     const responseClone = response.clone();
                     caches.open(CACHE_NAME).then((cache) => {
@@ -55,20 +77,10 @@ self.addEventListener('fetch', (event) => {
                     });
                 }
                 return response;
-            })
-            .catch(() => {
-                // Fallback to cache
-                return caches.match(request).then((cachedResponse) => {
-                    if (cachedResponse) {
-                        return cachedResponse;
-                    }
-                    // Return offline page for navigation requests
-                    if (request.mode === 'navigate') {
-                        return caches.match('/offline.html');
-                    }
-                    return new Response('Offline', { status: 503 });
-                });
-            })
+            }).catch(() => cached || new Response('Offline', { status: 503 }));
+
+            return cached || networkFetch;
+        })
     );
 });
 
@@ -80,7 +92,6 @@ self.addEventListener('sync', (event) => {
 });
 
 async function syncViolations() {
-    // Get pending violations from IndexedDB and submit them
     console.log('[SW] Syncing pending violations...');
 }
 
@@ -117,7 +128,6 @@ self.addEventListener('notificationclick', (event) => {
     const url = event.notification.data?.url || '/dashboard';
     event.waitUntil(
         clients.matchAll({ type: 'window' }).then((clientList) => {
-            // Focus existing window or open new one
             for (const client of clientList) {
                 if (client.url.includes(url) && 'focus' in client) {
                     return client.focus();

@@ -112,22 +112,43 @@ export default function ReportPage() {
                             </label>
 
                             {!preview ? (
-                                <div
-                                    className="flex h-56 md:h-48 w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-white p-6 text-center transition-all hover:border-blue-500 hover:bg-blue-50/50 active:scale-[0.98] dark:border-slate-700 dark:bg-slate-900 dark:hover:border-blue-400 dark:hover:bg-blue-900/10">
-                                    <div className="text-center">
-                                        <svg className="mx-auto h-12 w-12 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                                        </svg>
-                                        <div className="mt-4 flex text-sm leading-6 text-slate-600 dark:text-slate-400">
-                                            <label
-                                                htmlFor="file-upload"
-                                                className="relative cursor-pointer rounded bg-transparent font-semibold text-blue-600 focus-within:outline-none hover:text-blue-500"
-                                            >
-                                                <span>Upload a file</span>
-                                                <input id="file-upload" name="file-upload" type="file" className="sr-only" accept="image/*" capture="environment" onChange={handleFileChange} />
-                                            </label>
-                                            <p className="pl-1">or take a photo</p>
+                                <div className="space-y-3">
+                                    {/* Mobile: Two separate buttons */}
+                                    <div className="flex gap-3 md:hidden">
+                                        <label className="flex-1 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-blue-300 bg-blue-50/50 p-6 text-center cursor-pointer transition-all active:scale-[0.97] dark:border-blue-800 dark:bg-blue-900/10">
+                                            <svg className="h-10 w-10 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            </svg>
+                                            <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">Take Photo</span>
+                                            <input type="file" className="sr-only" accept="image/*" capture="environment" onChange={handleFileChange} />
+                                        </label>
+                                        <label className="flex-1 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 bg-white p-6 text-center cursor-pointer transition-all active:scale-[0.97] dark:border-slate-700 dark:bg-slate-900">
+                                            <svg className="h-10 w-10 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            </svg>
+                                            <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">Gallery</span>
+                                            <input type="file" className="sr-only" accept="image/*" onChange={handleFileChange} />
+                                        </label>
+                                    </div>
+                                    {/* Desktop: Original combined upload area */}
+                                    <div
+                                        className="hidden md:flex h-48 w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-white p-6 text-center transition-all hover:border-blue-500 hover:bg-blue-50/50 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-blue-400 dark:hover:bg-blue-900/10">
+                                        <div className="text-center">
+                                            <svg className="mx-auto h-12 w-12 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            </svg>
+                                            <div className="mt-4 flex text-sm leading-6 text-slate-600 dark:text-slate-400">
+                                                <label
+                                                    htmlFor="file-upload-desktop"
+                                                    className="relative cursor-pointer rounded bg-transparent font-semibold text-blue-600 focus-within:outline-none hover:text-blue-500"
+                                                >
+                                                    <span>Upload a file</span>
+                                                    <input id="file-upload-desktop" name="file-upload" type="file" className="sr-only" accept="image/*" onChange={handleFileChange} />
+                                                </label>
+                                                <p className="pl-1">or drag and drop</p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
