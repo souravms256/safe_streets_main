@@ -159,24 +159,35 @@ export default function Map({ violations, showHeatmap = false, theme = 'streets'
                         position={[coords[0], coords[1]]}
                         icon={isMyReport ? UserIcon : DefaultIcon}
                     >
-                        <Popup>
-                            <div className="p-2 min-w-[200px] dark:text-slate-900">
-                                {isMyReport && (
-                                    <div className="mb-2 px-2 py-0.5 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest rounded-full w-fit">
-                                        Your Report
+                        <Popup className="premium-popup">
+                            <div className="p-0.5 min-w-[220px]">
+                                <div className="relative h-28 w-full mb-3 overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
+                                    <img
+                                        src={violation.image_url}
+                                        className="h-full w-full object-cover transition-transform duration-500 hover:scale-110"
+                                        alt="Violation"
+                                    />
+                                    {isMyReport && (
+                                        <div className="absolute top-2 left-2 px-2.5 py-1 bg-blue-600/90 backdrop-blur-md text-white text-[9px] font-black uppercase tracking-[0.15em] rounded-lg shadow-lg">
+                                            Your Report
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="px-1 pb-1">
+                                    <h3 className="font-bold text-slate-900 leading-tight mb-1">{violation.violation_type}</h3>
+                                    <p className="text-[11px] text-slate-500 mb-2 font-medium line-clamp-2">
+                                        {violation.address || violation.location}
+                                    </p>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider
+                                            ${violation.status === 'Verified'
+                                                ? 'bg-green-100 text-green-700'
+                                                : 'bg-amber-100 text-amber-700'}`}>
+                                            {violation.status}
+                                        </span>
+                                        <span className="text-[9px] font-bold text-slate-400">View Details →</span>
                                     </div>
-                                )}
-                                <img
-                                    src={violation.image_url}
-                                    className="w-full h-24 object-cover rounded-md mb-2 bg-slate-100"
-                                    alt="Violation"
-                                />
-                                <h3 className="font-bold">{violation.violation_type}</h3>
-                                <p className="text-xs mb-1">{violation.address || violation.location}</p>
-                                <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium 
-                                    ${violation.status === 'Verified' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                                    {violation.status}
-                                </span>
+                                </div>
                             </div>
                         </Popup>
                     </Marker>

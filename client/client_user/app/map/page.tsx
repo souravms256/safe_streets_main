@@ -374,27 +374,30 @@ export default function MapPage() {
                 </div>
 
                 {/* Mobile: Top search bar */}
-                <div className="absolute top-[calc(3.5rem+env(safe-area-inset-top)+0.5rem)] left-3 right-3 z-[1000]">
+                <div className="absolute top-[calc(0.5rem+env(safe-area-inset-top))] left-3 right-3 z-[1000]">
                     <form onSubmit={handleSearch} className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                         <input
                             type="text"
                             placeholder="Search location..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-0 rounded-2xl text-sm shadow-lg shadow-black/10 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                            className="w-full pl-11 pr-4 py-3 bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border border-white/20 dark:border-slate-800/20 rounded-2xl text-sm shadow-2xl shadow-black/10 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all font-medium"
                         />
                     </form>
                 </div>
 
                 {/* Mobile: Compact stats pill */}
                 {!loading && (
-                    <div className="absolute top-[calc(3.5rem+env(safe-area-inset-top)+3.5rem)] left-3 z-[1000]">
-                        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl px-3 py-1.5 rounded-full shadow-lg text-xs font-bold flex items-center gap-2">
-                            <span className="text-slate-900 dark:text-white">{viewStats.visibleCount}</span>
-                            <span className="text-[9px] text-green-500 uppercase">Live</span>
-                            <span className="text-slate-300 dark:text-slate-600">|</span>
-                            <span className="text-slate-500">{filteredViolations.length} total</span>
+                    <div className="absolute top-[calc(4.5rem+env(safe-area-inset-top))] left-3 z-[1000]">
+                        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border border-white/20 dark:border-slate-800/20 px-3.5 py-2 rounded-full shadow-2xl shadow-black/10 text-[11px] font-bold flex items-center gap-2.5">
+                            <div className="flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                <span className="text-slate-900 dark:text-white">{viewStats.visibleCount}</span>
+                                <span className="text-[9px] text-slate-400 uppercase tracking-tight">In View</span>
+                            </div>
+                            <span className="text-slate-200 dark:text-slate-800">|</span>
+                            <span className="text-slate-500">{filteredViolations.length} Reports</span>
                         </div>
                     </div>
                 )}
@@ -402,7 +405,7 @@ export default function MapPage() {
                 {/* Mobile: Filter toggle button */}
                 <button
                     onClick={() => setShowSidebar(!showSidebar)}
-                    className="absolute top-[calc(3.5rem+env(safe-area-inset-top)+3.5rem)] right-3 z-[1000] bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl p-2.5 rounded-2xl shadow-lg active:scale-95 transition-transform"
+                    className="absolute top-[calc(4.5rem+env(safe-area-inset-top))] right-3 z-[1000] bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border border-white/20 dark:border-slate-800/20 p-2.5 rounded-2xl shadow-2xl shadow-black/10 active:scale-95 transition-all"
                 >
                     <Filter className="w-4 h-4 text-slate-600 dark:text-slate-300" />
                 </button>
@@ -414,10 +417,13 @@ export default function MapPage() {
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: 10 }}
-                            className="absolute bottom-[calc(4.5rem+env(safe-area-inset-bottom)+0.5rem)] left-3 right-3 z-[1000] bg-white/90 dark:bg-slate-900/80 backdrop-blur-md px-4 py-2 rounded-xl shadow-lg text-[10px] font-bold uppercase tracking-widest text-slate-500 text-center"
+                            className="absolute bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-4 right-4 z-[1000] bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl px-5 py-3 rounded-2xl border border-white/20 dark:border-slate-800/20 shadow-2xl shadow-black/20 text-[10px] font-bold uppercase tracking-widest text-slate-500"
                         >
-                            Danger Zone Intensity
-                            <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 via-lime-500 to-red-500 rounded-full mt-2" />
+                            <div className="flex justify-between mb-2 items-center">
+                                <span>Incident Density</span>
+                                <span className="text-[8px] opacity-60">High Activity Area</span>
+                            </div>
+                            <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 via-lime-500 to-red-500 rounded-full" />
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -439,11 +445,13 @@ export default function MapPage() {
                                 initial={{ y: "100%" }}
                                 animate={{ y: 0 }}
                                 exit={{ y: "100%" }}
-                                transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                                className="absolute bottom-0 left-0 right-0 z-[1002] bg-white dark:bg-slate-900 rounded-t-3xl shadow-2xl max-h-[60vh] overflow-y-auto"
+                                transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                                className="absolute bottom-0 left-0 right-0 z-[1002] bg-white dark:bg-slate-900 rounded-t-[2.5rem] shadow-2xl max-h-[70vh] overflow-y-auto"
                             >
                                 {/* Drag handle */}
-                                <div className="drag-handle" />
+                                <div className="flex justify-center pt-3 pb-1">
+                                    <div className="h-1 w-12 bg-slate-200 dark:bg-slate-800 rounded-full" />
+                                </div>
                                 <div className="px-5 pb-2 flex items-center justify-between">
                                     <h3 className="font-bold text-sm text-slate-900 dark:text-white">Filters</h3>
                                     <button
