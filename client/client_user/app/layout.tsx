@@ -7,6 +7,7 @@ import Footer from "@/components/Footer";
 import { Toaster } from "react-hot-toast";
 import Script from "next/script";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
+import ThemeProvider from "@/components/ThemeProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -36,18 +37,27 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50 relative pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0`}>
-        <Navbar />
-        <main className="pt-[calc(3.5rem+env(safe-area-inset-top))] md:pt-[calc(4rem+env(safe-area-inset-top))]">
-          {children}
-        </main>
-        <BottomNav />
-        <div className="hidden md:block">
-          <Footer />
-        </div>
-        <Toaster position="top-center" />
-        <ServiceWorkerRegistration />
+        <ThemeProvider>
+          <Navbar />
+          <main className="pt-[calc(3.5rem+env(safe-area-inset-top))] md:pt-[calc(4rem+env(safe-area-inset-top))]">
+            {children}
+          </main>
+          <BottomNav />
+          <div className="hidden md:block">
+            <Footer />
+          </div>
+          <Toaster
+            position="top-center"
+            containerStyle={{ top: "calc(env(safe-area-inset-top, 0px) + 4rem)" }}
+            toastOptions={{
+              className: "!rounded-xl !shadow-lg !border !border-slate-200 dark:!border-slate-700 dark:!bg-slate-800 dark:!text-white",
+              duration: 3000,
+            }}
+          />
+          <ServiceWorkerRegistration />
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -16,8 +16,12 @@ import {
     LogOut,
     FileText,
     MapPin,
+    Sun,
+    Moon,
+    Monitor,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { useTheme } from "@/components/ThemeProvider";
 
 interface UserProfile {
     full_name: string;
@@ -97,6 +101,8 @@ export default function ProfilePage() {
             onClick: () => { },
         },
     ];
+
+    const { theme, setTheme } = useTheme();
 
     if (loading) {
         return (
@@ -255,6 +261,30 @@ export default function ProfilePage() {
                             <ChevronRight className="h-4 w-4 text-slate-300 dark:text-slate-600" />
                         </button>
                     ))}
+                </div>
+
+                {/* Appearance */}
+                <div className="rounded-2xl bg-white dark:bg-slate-900 shadow-sm border border-slate-100 dark:border-slate-800 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Appearance</p>
+                    <div className="flex gap-2 bg-slate-100 dark:bg-slate-800 rounded-xl p-1">
+                        {([
+                            { value: "light" as const, icon: Sun, label: "Light" },
+                            { value: "system" as const, icon: Monitor, label: "System" },
+                            { value: "dark" as const, icon: Moon, label: "Dark" },
+                        ]).map((opt) => (
+                            <button
+                                key={opt.value}
+                                onClick={() => setTheme(opt.value)}
+                                className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-all ${theme === opt.value
+                                        ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
+                                        : "text-slate-500 dark:text-slate-400"
+                                    }`}
+                            >
+                                <opt.icon className="h-3.5 w-3.5" />
+                                {opt.label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 {/* Sign Out */}
