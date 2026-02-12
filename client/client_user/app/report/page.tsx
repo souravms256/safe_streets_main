@@ -97,8 +97,8 @@ export default function ReportPage() {
     };
 
     return (
-        <div className="min-h-[calc(100vh-4rem)] bg-slate-50 px-4 py-8 dark:bg-slate-950 sm:px-6 lg:px-8">
-            <div className="mx-auto max-w-lg">
+        <div className="min-h-screen bg-slate-50 py-6 md:py-12 dark:bg-slate-950 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-lg px-4 sm:px-6">
                 <h1 className="mb-8 text-2xl font-bold text-slate-900 dark:text-white">
                     Report a Traffic Violation
                 </h1>
@@ -112,7 +112,8 @@ export default function ReportPage() {
                             </label>
 
                             {!preview ? (
-                                <div className="flex h-48 w-full items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 dark:border-slate-700 dark:bg-slate-800">
+                                <div
+                                    className="flex h-56 md:h-48 w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-white p-6 text-center transition-all hover:border-blue-500 hover:bg-blue-50/50 active:scale-[0.98] dark:border-slate-700 dark:bg-slate-900 dark:hover:border-blue-400 dark:hover:bg-blue-900/10">
                                     <div className="text-center">
                                         <svg className="mx-auto h-12 w-12 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />

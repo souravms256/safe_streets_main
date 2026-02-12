@@ -317,15 +317,17 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
 
             {/* Details Modal */}
             {selectedViolation && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
                     {/* Backdrop */}
                     <div
                         className="fixed inset-0 bg-black/60 backdrop-blur-sm"
                         onClick={closeModal}
                     />
 
-                    {/* Modal Content */}
-                    <div className="relative z-10 w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-4 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl">
+                    {/* Modal Content — full screen on mobile, centered card on desktop */}
+                    <div className="relative z-10 w-full md:max-w-2xl h-[90vh] md:h-auto md:max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 rounded-t-3xl md:rounded-2xl shadow-2xl md:mx-4">
+                        {/* Mobile drag handle */}
+                        <div className="md:hidden drag-handle" />
                         {/* Header */}
                         <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
                             <h3 className="text-lg font-semibold text-slate-900 dark:text-white">

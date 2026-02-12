@@ -36,9 +36,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.className} min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50 relative pb-20 md:pb-0`}>
+      <body className={`${inter.className} min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50 relative pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0`}>
         <Navbar />
-        <main className="pt-[calc(4rem+env(safe-area-inset-top))]">
+        <main className="pt-[calc(3.5rem+env(safe-area-inset-top))] md:pt-[calc(4rem+env(safe-area-inset-top))]">
           {children}
         </main>
         <BottomNav />

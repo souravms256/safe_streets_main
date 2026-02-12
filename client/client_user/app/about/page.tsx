@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 export default function AboutPage() {
     return (
         <div className="bg-white dark:bg-slate-950">
-            <div className="relative isolate overflow-hidden bg-slate-900 py-24 sm:py-32">
+            <div className="relative isolate overflow-hidden bg-slate-900 py-16 sm:py-24 md:py-32">
                 <Image
                     src="/images/about-community.png"
                     alt="Community volunteers"
@@ -15,7 +15,7 @@ export default function AboutPage() {
                 />
                 <div className="mx-auto max-w-7xl px-6 lg:px-8">
                     <div className="mx-auto max-w-2xl lg:mx-0">
-                        <h2 className="text-4xl font-bold tracking-tight text-white sm:text-6xl">
+                        <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-6xl">
                             About SafeStreets
                         </h2>
                         <p className="mt-6 text-lg leading-8 text-slate-300">
@@ -38,7 +38,7 @@ export default function AboutPage() {
                                     <dt className="text-base leading-7 text-slate-600 dark:text-slate-400">
                                         {stat.label}
                                     </dt>
-                                    <dd className="text-5xl font-semibold tracking-tight text-slate-900 dark:text-white">
+                                    <dd className="text-3xl md:text-5xl font-semibold tracking-tight text-slate-900 dark:text-white">
                                         {stat.value}
                                     </dd>
                                 </div>

@@ -4,9 +4,9 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "./ui/Button";
-
 import ProfileMenu from "./ProfileMenu";
 import api from "@/services/api";
+import { Menu, X } from "lucide-react";
 
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -22,18 +22,20 @@ const Navbar = () => {
     };
 
     useEffect(() => {
-        // Check localStorage for access_token
         const token = typeof window !== 'undefined' ? localStorage.getItem("access_token") : null;
         if (token) {
             api.get("/users/me")
                 .then(res => setUser(res.data))
-                .catch(() => setUser(null)); // Token might be invalid
+                .catch(() => setUser(null));
         } else {
             setUser(null);
         }
-    }, [pathname]); // Re-check on route change (e.g. after login redirect)
+    }, [pathname]);
 
-    const isDashboard = pathname.startsWith("/dashboard");
+    // Close mobile menu on route change
+    useEffect(() => {
+        setIsOpen(false);
+    }, [pathname]);
 
     const publicLinks = [
         { name: "Home", href: "/" },
@@ -46,21 +48,17 @@ const Navbar = () => {
         { name: "Map View", href: "/map" },
     ];
 
-    // Show dashboard links if user is logged in, otherwise public links
     const activeLinks = user ? dashboardLinks : publicLinks;
-    const isLoggedOut = !user;
-
-
     const isActive = (path: string) => pathname === path;
 
     return (
-        <nav className="fixed top-0 left-0 right-0 z-[2000] border-b border-slate-200 bg-white/80 backdrop-blur-md pt-[env(safe-area-inset-top)] dark:border-slate-800 dark:bg-slate-900/80">
+        <nav className="fixed top-0 left-0 right-0 z-[2000] border-b border-slate-200/80 bg-white/90 backdrop-blur-xl pt-[env(safe-area-inset-top)] dark:border-slate-800/80 dark:bg-slate-900/90">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                <div className="flex h-16 items-center justify-between">
+                <div className="flex h-14 md:h-16 items-center justify-between">
                     {/* Logo */}
                     <div className="flex-shrink-0">
                         <Link href={user ? "/dashboard" : "/"} className="flex items-center gap-2">
-                            <span className="text-2xl font-bold text-blue-600 dark:text-blue-500">
+                            <span className="text-xl md:text-2xl font-bold text-blue-600 dark:text-blue-500">
                                 SafeStreets
                             </span>
                         </Link>
@@ -108,93 +106,68 @@ const Navbar = () => {
                     <div className="md:hidden">
                         <button
                             onClick={() => setIsOpen(!isOpen)}
-                            className="inline-flex items-center justify-center rounded-md p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                            className="inline-flex items-center justify-center rounded-xl p-2 text-slate-600 transition-colors active:bg-slate-100 dark:text-slate-300 dark:active:bg-slate-800"
                         >
                             <span className="sr-only">Open main menu</span>
                             {!isOpen ? (
-                                <svg
-                                    className="block h-6 w-6"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    strokeWidth="1.5"
-                                    stroke="currentColor"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-                                    />
-                                </svg>
+                                <Menu className="h-5 w-5" />
                             ) : (
-                                <svg
-                                    className="block h-6 w-6"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    strokeWidth="1.5"
-                                    stroke="currentColor"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        d="M6 18L18 6M6 6l12 12"
-                                    />
-                                </svg>
+                                <X className="h-5 w-5" />
                             )}
                         </button>
                     </div>
                 </div>
             </div>
 
-            {/* Mobile Menu */}
-            {isOpen && (
-                <div className="md:hidden">
-                    <div className="space-y-1 bg-white px-2 pt-2 pb-3 shadow-lg dark:bg-slate-900">
-                        {activeLinks.map((link) => (
-                            <Link
-                                key={link.name}
-                                href={link.href}
-                                onClick={() => setIsOpen(false)}
-                                className={`block rounded-md px-3 py-2 text-base font-medium ${isActive(link.href)
-                                    ? "bg-blue-50 text-blue-600 dark:bg-slate-800 dark:text-blue-500"
-                                    : "text-slate-600 hover:bg-slate-50 hover:text-blue-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-blue-400"
-                                    }`}
-                            >
-                                {link.name}
-                            </Link>
-                        ))}
-                        {/* Only show login/signup in mobile menu if NOT logged in */}
-                        {user ? (
-                            <div className="mt-4 flex flex-col space-y-2 border-t border-slate-200 px-3 pt-4 dark:border-slate-800">
-                                <Link href="/profile" onClick={() => setIsOpen(false)}>
-                                    <Button variant="ghost" className="w-full justify-start text-left">
-                                        My Profile
-                                    </Button>
-                                </Link>
-                                <Button
-                                    variant="ghost"
-                                    onClick={handleLogout}
-                                    className="w-full justify-start text-left text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
-                                >
-                                    Sign out
+            {/* Mobile Menu — slide down */}
+            <div
+                className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? "max-h-[400px] opacity-100" : "max-h-0 opacity-0"
+                    }`}
+            >
+                <div className="space-y-1 bg-white px-4 pt-2 pb-4 shadow-lg dark:bg-slate-900">
+                    {activeLinks.map((link) => (
+                        <Link
+                            key={link.name}
+                            href={link.href}
+                            className={`block rounded-xl px-3 py-2.5 text-base font-medium transition-colors active:scale-[0.98] ${isActive(link.href)
+                                ? "bg-blue-50 text-blue-600 dark:bg-slate-800 dark:text-blue-500"
+                                : "text-slate-600 hover:bg-slate-50 hover:text-blue-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-blue-400"
+                                }`}
+                        >
+                            {link.name}
+                        </Link>
+                    ))}
+                    {user ? (
+                        <div className="mt-3 flex flex-col space-y-2 border-t border-slate-200 px-3 pt-3 dark:border-slate-800">
+                            <Link href="/profile">
+                                <Button variant="ghost" className="w-full justify-start text-left">
+                                    My Profile
                                 </Button>
-                            </div>
-                        ) : (
-                            <div className="mt-4 flex flex-col space-y-2 border-t border-slate-200 px-3 pt-4 dark:border-slate-800">
-                                <Link href="/login" onClick={() => setIsOpen(false)}>
-                                    <Button variant="ghost" className="w-full justify-start">
-                                        Log in
-                                    </Button>
-                                </Link>
-                                <Link href="/register" onClick={() => setIsOpen(false)}>
-                                    <Button variant="primary" className="w-full">
-                                        Sign up
-                                    </Button>
-                                </Link>
-                            </div>
-                        )}
-                    </div>
+                            </Link>
+                            <Button
+                                variant="ghost"
+                                onClick={handleLogout}
+                                className="w-full justify-start text-left text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
+                            >
+                                Sign out
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="mt-3 flex flex-col space-y-2 border-t border-slate-200 px-3 pt-3 dark:border-slate-800">
+                            <Link href="/login">
+                                <Button variant="ghost" className="w-full justify-start">
+                                    Log in
+                                </Button>
+                            </Link>
+                            <Link href="/register">
+                                <Button variant="primary" className="w-full">
+                                    Sign up
+                                </Button>
+                            </Link>
+                        </div>
+                    )}
                 </div>
-            )}
+            </div>
         </nav>
     );
 };

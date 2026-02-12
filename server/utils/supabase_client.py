@@ -14,7 +14,9 @@ def get_supabase():
             storage_client_timeout=60,
             schema="public",
         )
-        _supabase_client = create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY, options=options)
+        # Use service role key to bypass RLS for server-side operations
+        key = settings.SUPABASE_SERVICE_ROLE_KEY or settings.SUPABASE_ANON_KEY
+        _supabase_client = create_client(settings.SUPABASE_URL, key, options=options)
     return _supabase_client
 
 # For backward compatibility, provide a supabase object that acts like the client

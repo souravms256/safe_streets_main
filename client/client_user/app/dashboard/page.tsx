@@ -173,18 +173,6 @@ export default function DashboardPage() {
                         <ViolationsTable violations={violations} onDelete={handleDelete} />
                     </motion.div>
                 )}
-                {/* Floating Action Button (Mobile Only) */}
-                <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="fixed bottom-24 right-6 md:hidden z-40"
-                >
-                    <Link href="/report">
-                        <button className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 shadow-lg shadow-blue-600/30 text-white transition-transform active:scale-90">
-                            <Plus className="h-8 w-8" />
-                        </button>
-                    </Link>
-                </motion.div>
             </motion.div>
         </div>
     );

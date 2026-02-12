@@ -8,7 +8,7 @@ export default function Home() {
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-white pt-16 pb-20 lg:pt-24 lg:pb-28 dark:bg-slate-950">
+      <section className="relative overflow-hidden bg-white pt-8 pb-12 md:pt-16 md:pb-20 lg:pt-24 lg:pb-28 dark:bg-slate-950">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:gap-x-12">
             <div className="mx-auto max-w-2xl lg:mx-0 lg:max-w-xl lg:flex-shrink-0">
@@ -20,7 +20,7 @@ export default function Home() {
                   </Link>
                 </div>
               </div>
-              <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-6xl dark:text-white">
+              <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl lg:text-6xl dark:text-white">
                 Smarter Traffic, <span className="text-blue-600">Safer Streets</span>
               </h1>
               <p className="mt-6 text-lg leading-8 text-slate-600 dark:text-slate-300">
@@ -59,12 +59,12 @@ export default function Home() {
       </section>
 
       {/* Feature Section */}
-      <section className="bg-slate-50 py-24 sm:py-32 dark:bg-slate-900">
+      <section className="bg-slate-50 py-12 md:py-24 sm:py-32 dark:bg-slate-900">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
 
             {/* Image Side */}
-            <div className="order-2 lg:order-1 relative h-[600px] w-full rounded-3xl overflow-hidden shadow-2xl ring-1 ring-slate-900/10 dark:ring-white/10">
+            <div className="order-2 lg:order-1 relative h-[300px] md:h-[600px] w-full rounded-3xl overflow-hidden shadow-2xl ring-1 ring-slate-900/10 dark:ring-white/10">
               <Image
                 src="/images/feature-violation-detect.png"
                 alt="Violation Detection Interface"
