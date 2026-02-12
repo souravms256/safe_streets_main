@@ -143,7 +143,8 @@ export default function ProfilePage() {
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-4">
             {/* Profile Header */}
-            <div className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 px-6 pb-16 pt-8 md:pt-12">
+            {/* Profile Header */}
+            <div className="relative z-0 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 px-6 pb-10 pt-6 md:pt-10">
                 {/* Background pattern */}
                 <div className="absolute inset-0 overflow-hidden opacity-10">
                     <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-white/20" />
@@ -153,16 +154,16 @@ export default function ProfilePage() {
                 <div className="relative mx-auto max-w-lg">
                     <div className="flex flex-col items-center text-center">
                         {/* Avatar */}
-                        <div className="mb-4 flex h-20 w-20 md:h-24 md:w-24 items-center justify-center rounded-full bg-white/20 text-white text-2xl md:text-3xl font-black ring-4 ring-white/30 backdrop-blur-sm">
+                        <div className="relative z-10 mb-3 flex h-20 w-20 md:h-24 md:w-24 items-center justify-center rounded-full bg-white/20 text-white text-2xl md:text-3xl font-black ring-4 ring-white/30 backdrop-blur-sm">
                             {initials}
                         </div>
-                        <h1 className="text-xl md:text-2xl font-bold text-white">
+                        <h1 className="relative z-10 text-xl md:text-2xl font-bold text-white">
                             {user?.full_name}
                         </h1>
-                        <p className="mt-1 text-sm text-blue-200">
+                        <p className="relative z-10 text-sm text-blue-200">
                             {user?.email}
                         </p>
-                        <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+                        <div className="relative z-10 mt-2 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-0.5 text-xs font-semibold text-white backdrop-blur-sm">
                             <Shield className="h-3 w-3" />
                             {user?.role || "Member"}
                         </div>
@@ -171,7 +172,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Stats Row */}
-            <div className="mx-auto max-w-lg px-4 -mt-6">
+            <div className="relative z-50 mx-auto max-w-lg px-4 -mt-5">
                 <div className="grid grid-cols-3 gap-3">
                     <div className="rounded-2xl bg-white p-3 text-center shadow-lg shadow-slate-200/50 dark:bg-slate-900 dark:shadow-none">
                         <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">—</p>
