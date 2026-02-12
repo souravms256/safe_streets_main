@@ -26,7 +26,7 @@ export default function ContactPage() {
                         Contact Us
                     </h2>
                     <p className="mt-2 text-lg leading-8 text-slate-600 dark:text-slate-400">
-                        Have questions or suggestions? We'd love to hear from you.
+                        Have questions or suggestions? We&apos;d love to hear from you.
                     </p>
                 </div>
                 <div className="mx-auto mt-16 max-w-xl sm:mt-20">

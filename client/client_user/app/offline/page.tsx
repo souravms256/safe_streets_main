@@ -1,3 +1,4 @@
+"use client";
 import React from "react";
 import { WifiOff } from "lucide-react";
 import Link from "next/link";
@@ -10,10 +11,10 @@ export default function OfflinePage() {
                 <WifiOff className="h-10 w-10 text-slate-400" />
             </div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-                You're Offline
+                You&apos;re Offline
             </h1>
             <p className="mt-3 max-w-sm text-slate-500 dark:text-slate-400">
-                It looks like you've lost your internet connection. Some features may be unavailable until you're back online.
+                It looks like you&apos;ve lost your internet connection. Some features may be unavailable until you&apos;re back online.
             </p>
             <div className="mt-8 flex gap-3">
                 <Button onClick={() => window.location.reload()} variant="primary">
