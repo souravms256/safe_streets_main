@@ -1,0 +1,484 @@
+"use client";
+
+import React, { useEffect, useState } from "react";
+import api from "@/services/api";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import toast from "react-hot-toast";
+import {
+    CheckCircle,
+    XCircle,
+    Trash2,
+    MapPin,
+    Clock,
+    LayoutList,
+    Map as MapIcon,
+    Search,
+    Download,
+    RefreshCw,
+    Filter,
+    Image as ImageIcon,
+    X,
+    Maximize2
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import dynamic from 'next/dynamic';
+import { motion, AnimatePresence } from "framer-motion";
+
+const ViolationsMap = dynamic(() => import('@/components/dashboard/violations-map').then(mod => mod.ViolationsMap), {
+    ssr: false,
+    loading: () => <div className="h-[600px] w-full bg-gray-900/50 animate-pulse rounded-2xl border border-gray-800" />
+});
+
+interface Violation {
+    id: string;
+    violation_type: string;
+    image_url: string;
+    status: string;
+    location: string;
+    created_at: string;
+    details: any;
+    profiles?: {
+        full_name: string;
+        email: string;
+    }
+}
+
+export default function ViolationsPage() {
+    const [violations, setViolations] = useState<Violation[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [viewMode, setViewMode] = useState<'list' | 'map' | 'heatmap'>('list');
+    const [searchQuery, setSearchQuery] = useState("");
+    const [filterStatus, setFilterStatus] = useState("All");
+    const [currentPage, setCurrentPage] = useState(1);
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
+    const rowsPerPage = 10;
+
+    const fetchViolations = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await api.get("/admin/violations");
+            const violationsData = res.data.data || res.data;
+            setViolations(Array.isArray(violationsData) ? violationsData : []);
+        } catch (error: any) {
+            console.error("Failed to fetch violations", error);
+            const errorMsg = error.response?.data?.detail || "Failed to load violations";
+            setError(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg));
+            setViolations([]);
+            toast.error("Failed to load violations");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchViolations();
+    }, []);
+
+    // Filter Logic
+    const filteredViolations = violations.filter(v => {
+        const matchesStatus = filterStatus === "All" || v.status === filterStatus;
+        const searchLower = searchQuery.toLowerCase();
+        const matchesSearch =
+            v.violation_type.toLowerCase().includes(searchLower) ||
+            v.location.toLowerCase().includes(searchLower) ||
+            v.profiles?.full_name?.toLowerCase().includes(searchLower);
+        return matchesStatus && matchesSearch;
+    });
+
+    const sortedViolations = [...filteredViolations].sort((a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+
+    const paginatedViolations = sortedViolations.slice(
+        (currentPage - 1) * rowsPerPage,
+        currentPage * rowsPerPage
+    );
+
+    const handleStatusUpdate = async (id: string, status: string) => {
+        try {
+            await api.put(`/admin/violations/${id}/status`, { status });
+            setViolations(violations.map(v => v.id === id ? { ...v, status } : v));
+            toast.success(`Violation marked as ${status}`);
+        } catch (error) {
+            console.error("Failed to update status", error);
+            toast.error("Failed to update status");
+        }
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!confirm("Are you sure you want to delete this violation?")) return;
+        try {
+            await api.delete(`/admin/violations/${id}`);
+            setViolations(violations.filter(v => v.id !== id));
+            toast.success("Violation deleted");
+        } catch (error) {
+            console.error("Failed to delete violation", error);
+            toast.error("Failed to delete violation");
+        }
+    };
+
+    const toggleSelection = (id: string) => {
+        const newSelected = new Set(selectedIds);
+        if (newSelected.has(id)) newSelected.delete(id);
+        else newSelected.add(id);
+        setSelectedIds(newSelected);
+    };
+
+    const handleBulkAction = async (action: 'verify' | 'reject' | 'delete') => {
+        const statusMap = { verify: 'Verified', reject: 'Rejected' };
+        let successCount = 0;
+
+        for (const id of Array.from(selectedIds)) {
+            try {
+                if (action === 'delete') {
+                    await api.delete(`/admin/violations/${id}`);
+                    setViolations(prev => prev.filter(v => v.id !== id));
+                } else {
+                    const status = statusMap[action];
+                    await api.put(`/admin/violations/${id}/status`, { status });
+                    setViolations(prev => prev.map(v => v.id === id ? { ...v, status } : v));
+                }
+                successCount++;
+            } catch (error) {
+                console.error(`Failed to process ${id}`, error);
+            }
+        }
+
+        toast.success(`Processed ${successCount} violations`);
+        setSelectedIds(new Set());
+    };
+
+    // Table Skeleton
+    const TableSkeleton = () => (
+        <div className="space-y-4">
+            {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-white/5 animate-pulse border border-white/5">
+                    <div className="w-6 h-6 rounded bg-white/10" />
+                    <div className="w-16 h-12 rounded bg-white/10" />
+                    <div className="w-32 h-6 rounded bg-white/10" />
+                    <div className="flex-1 h-6 rounded bg-white/10" />
+                    <div className="w-20 h-6 rounded bg-white/10" />
+                </div>
+            ))}
+        </div>
+    );
+
+    return (
+        <div className="space-y-8 animate-fade-in pb-10">
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold text-white tracking-tight">Violations</h1>
+                    <p className="text-gray-500 mt-1">Manage and verify reported violations</p>
+                </div>
+
+                <div className="flex items-center bg-gray-900/50 p-1 rounded-xl border border-white/10 backdrop-blur-sm">
+                    <button
+                        onClick={() => setViewMode('list')}
+                        className={cn(
+                            "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all",
+                            viewMode === 'list' ? "bg-blue-500/20 text-blue-400 shadow-sm" : "text-gray-400 hover:text-white"
+                        )}
+                    >
+                        <LayoutList className="h-4 w-4" />
+                        List
+                    </button>
+                    <button
+                        onClick={() => setViewMode('map')}
+                        className={cn(
+                            "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all",
+                            viewMode === 'map' ? "bg-blue-500/20 text-blue-400 shadow-sm" : "text-gray-400 hover:text-white"
+                        )}
+                    >
+                        <MapIcon className="h-4 w-4" />
+                        Map
+                    </button>
+                </div>
+            </div>
+
+            {/* Filters Bar */}
+            <div className="flex flex-col md:flex-row gap-4 justify-between items-center premium-card p-2 rounded-xl">
+                <div className="flex gap-1 overflow-x-auto w-full md:w-auto p-1">
+                    {["All", "Pending", "Verified", "Rejected"].map((status) => (
+                        <button
+                            key={status}
+                            onClick={() => setFilterStatus(status)}
+                            className={cn(
+                                "px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
+                                filterStatus === status
+                                    ? "bg-white/10 text-white shadow-sm ring-1 ring-white/10"
+                                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                            )}
+                        >
+                            {status}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="relative w-full md:w-72 group">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-focus-within:text-blue-400 transition-colors" />
+                    <input
+                        type="text"
+                        placeholder="Search violations..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full bg-black/50 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all"
+                    />
+                </div>
+            </div>
+
+            {/* Content Area */}
+            {loading ? (
+                <TableSkeleton />
+            ) : viewMode === 'list' ? (
+                <div className="premium-card overflow-hidden border border-white/5 rounded-2xl bg-black/40 backdrop-blur-xl">
+                    {/* Bulk Actions Header */}
+                    {selectedIds.size > 0 && (
+                        <div className="bg-blue-500/10 border-b border-blue-500/20 px-6 py-4 flex items-center justify-between">
+                            <span className="text-sm text-blue-400 font-medium">
+                                {selectedIds.size} selected
+                            </span>
+                            <div className="flex gap-2">
+                                <Button size="sm" onClick={() => handleBulkAction('verify')} className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border-0">
+                                    Verify All
+                                </Button>
+                                <Button size="sm" onClick={() => handleBulkAction('reject')} className="bg-rose-500/20 text-rose-400 hover:bg-rose-500/30 border-0">
+                                    Reject All
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="border-b border-white/5 bg-white/[0.02]">
+                                    <th className="px-4 py-3 w-10">
+                                        <div
+                                            className={cn(
+                                                "w-4 h-4 rounded border cursor-pointer transition-colors",
+                                                filteredViolations.length > 0 && selectedIds.size === filteredViolations.length
+                                                    ? "bg-blue-500 border-blue-500"
+                                                    : "border-gray-600 hover:border-gray-400"
+                                            )}
+                                            onClick={() => {
+                                                if (selectedIds.size === filteredViolations.length) setSelectedIds(new Set());
+                                                else setSelectedIds(new Set(filteredViolations.map(v => v.id)));
+                                            }}
+                                        />
+                                    </th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Preview</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Violation</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Location</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Reporter</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
+                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                <AnimatePresence mode="popLayout">
+                                    {paginatedViolations.length === 0 ? (
+                                        <motion.tr
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            exit={{ opacity: 0 }}
+                                        >
+                                            <td colSpan={8} className="p-12 text-center">
+                                                <div className="flex flex-col items-center justify-center gap-3">
+                                                    <div className="w-16 h-16 rounded-full bg-gray-800/50 flex items-center justify-center">
+                                                        <Search className="h-8 w-8 text-gray-600" />
+                                                    </div>
+                                                    <p className="text-gray-400 font-medium">No violations found</p>
+                                                    <p className="text-gray-600 text-sm">Try adjusting your filters</p>
+                                                </div>
+                                            </td>
+                                        </motion.tr>
+                                    ) : (
+                                        paginatedViolations.map((violation, index) => (
+                                            <motion.tr
+                                                key={violation.id}
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, scale: 0.95 }}
+                                                transition={{ duration: 0.2, delay: index * 0.05 }}
+                                                className="group hover:bg-white/[0.02] transition-colors"
+                                            >
+                                                <td className="px-4 py-3">
+                                                    <div
+                                                        className={cn(
+                                                            "w-4 h-4 rounded border cursor-pointer transition-colors",
+                                                            selectedIds.has(violation.id)
+                                                                ? "bg-blue-500 border-blue-500"
+                                                                : "border-gray-600 group-hover:border-gray-500"
+                                                        )}
+                                                        onClick={() => toggleSelection(violation.id)}
+                                                    />
+                                                </td>
+                                                {/* Image Preview Column */}
+                                                <td className="px-4 py-3">
+                                                    <div
+                                                        className="relative w-16 h-12 rounded-lg overflow-hidden bg-gray-800 border border-white/10 group-hover:border-blue-500/50 transition-colors cursor-zoom-in group/image"
+                                                        onClick={() => setPreviewImage(violation.image_url)}
+                                                    >
+                                                        {violation.image_url ? (
+                                                            <div
+                                                                className="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover/image:scale-110"
+                                                                style={{ backgroundImage: `url(${violation.image_url})` }}
+                                                            />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center text-gray-600">
+                                                                <ImageIcon className="h-5 w-5" />
+                                                            </div>
+                                                        )}
+                                                        <div className="absolute inset-0 bg-black/0 group-hover/image:bg-black/20 transition-colors flex items-center justify-center">
+                                                            <Maximize2 className="h-4 w-4 text-white opacity-0 group-hover/image:opacity-100 transition-opacity" />
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <div className="flex flex-col max-w-[140px]">
+                                                        <span className="font-medium text-gray-200 truncate" title={violation.violation_type}>{violation.violation_type}</span>
+                                                        <span className="text-xs text-gray-500 truncate font-mono">{violation.id.substring(0, 8)}...</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <div className="flex items-center gap-2 text-gray-400 max-w-[120px]">
+                                                        <MapPin className="h-3 w-3 text-gray-500 shrink-0" />
+                                                        <span className="text-sm truncate" title={violation.location || "Unknown"}>{violation.location || "Unknown"}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <div className="flex flex-col max-w-[120px]">
+                                                        <span className="text-sm text-gray-300 truncate" title={violation.profiles?.full_name || "Anonymous"}>{violation.profiles?.full_name || "Anonymous"}</span>
+                                                        <span className="text-xs text-gray-600 truncate" title={violation.profiles?.email}>{violation.profiles?.email}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span className={cn(
+                                                        "px-2.5 py-1 rounded-full text-xs font-medium border whitespace-nowrap",
+                                                        violation.status === 'Verified' && "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+                                                        violation.status === 'Rejected' && "bg-rose-500/10 text-rose-400 border-rose-500/20",
+                                                        violation.status === 'Under Review' && "bg-amber-500/10 text-amber-400 border-amber-500/20",
+                                                        (!violation.status || violation.status === 'Pending') && "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                                                    )}>
+                                                        {violation.status || 'Pending'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-right text-sm text-gray-400 whitespace-nowrap">
+                                                    {new Date(violation.created_at).toLocaleDateString(undefined, {
+                                                        year: 'numeric',
+                                                        month: 'short',
+                                                        day: 'numeric'
+                                                    })}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        {violation.status !== "Verified" && (
+                                                            <button
+                                                                onClick={() => handleStatusUpdate(violation.id, "Verified")}
+                                                                className="p-1.5 rounded-lg hover:bg-emerald-500/20 text-gray-500 hover:text-emerald-400 transition-colors"
+                                                                title="Verify"
+                                                            >
+                                                                <CheckCircle className="h-4 w-4" />
+                                                            </button>
+                                                        )}
+                                                        {violation.status !== "Rejected" && (
+                                                            <button
+                                                                onClick={() => handleStatusUpdate(violation.id, "Rejected")}
+                                                                className="p-1.5 rounded-lg hover:bg-rose-500/20 text-gray-500 hover:text-rose-400 transition-colors"
+                                                                title="Reject"
+                                                            >
+                                                                <XCircle className="h-4 w-4" />
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            onClick={() => handleDelete(violation.id)}
+                                                            className="p-1.5 rounded-lg hover:bg-gray-800 text-gray-600 hover:text-gray-300 transition-colors"
+                                                            title="Delete"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </motion.tr>
+                                        ))
+                                    )}
+                                </AnimatePresence>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Pagination */}
+                    <div className="border-t border-white/5 px-6 py-4 flex items-center justify-between">
+                        <span className="text-sm text-gray-500">
+                            Page {currentPage} of {Math.ceil(sortedViolations.length / rowsPerPage) || 1}
+                        </span>
+                        <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={currentPage === 1}
+                                onClick={() => setCurrentPage(c => c - 1)}
+                                className="bg-transparent border-white/10 text-gray-400 hover:text-white hover:bg-white/5"
+                            >
+                                Previous
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={currentPage >= Math.ceil(sortedViolations.length / rowsPerPage)}
+                                onClick={() => setCurrentPage(c => c + 1)}
+                                className="bg-transparent border-white/10 text-gray-400 hover:text-white hover:bg-white/5"
+                            >
+                                Next
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <ViolationsMap violations={filteredViolations} showHeatmap={viewMode === 'heatmap'} />
+            )}
+
+            {/* Image Preview Modal */}
+            <AnimatePresence>
+                {previewImage && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+                        onClick={() => setPreviewImage(null)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            transition={{ type: "spring", duration: 0.5 }}
+                            className="relative max-w-4xl max-h-[90vh] w-full bg-gray-900 rounded-2xl overflow-hidden shadow-2xl border border-white/10 p-1"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <button
+                                onClick={() => setPreviewImage(null)}
+                                className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-md transition-colors"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                            <div className="w-full h-full rounded-xl overflow-hidden bg-black flex items-center justify-center">
+                                <img
+                                    src={previewImage}
+                                    alt="Evidence"
+                                    className="max-w-full max-h-[85vh] object-contain"
+                                />
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+}
