@@ -12,6 +12,7 @@ from routers.admin import router as admin_router
 from routers.admin_auth import router as admin_auth_router
 from routers.health import router as health_router
 from routers.violations import router as violations_router
+from routers.notifications import router as notifications_router
 
 # Setup structured logging
 setup_logging()
@@ -78,6 +79,7 @@ app.include_router(users_router)
 app.include_router(admin_auth_router)
 app.include_router(admin_router)
 app.include_router(violations_router)
+app.include_router(notifications_router)
 
 @app.get("/")
 def root():

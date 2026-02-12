@@ -192,6 +192,17 @@ def update_violation_status(violation_id: str, update: StatusUpdate, admin=Depen
             current_points = profile.data.get("points") or 0
             supabase.table("profiles").update({"points": current_points + 10}).eq("id", violation_user_id).execute()
             
+            # Create Notification
+            notification_data = {
+                "user_id": violation_user_id,
+                "title": "Report Verified! 🏆",
+                "message": f"Your report for '{existing.data.get('violation_type', 'Traffic Violation')}' has been verified. You've earned 10 points!",
+                "type": "verification",
+                "is_read": False,
+                "created_at": datetime.utcnow().isoformat()
+            }
+            supabase.table("notifications").insert(notification_data).execute()
+            
         return {"message": "Status updated successfully", "data": result.data[0]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

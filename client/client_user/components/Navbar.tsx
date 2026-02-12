@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "./ui/Button";
 import ProfileMenu from "./ProfileMenu";
+import NotificationBell from "./NotificationBell";
 import api from "@/services/api";
 import { Menu, X } from "lucide-react";
 
@@ -85,7 +86,10 @@ const Navbar = () => {
                     {/* Desktop Auth Buttons */}
                     <div className="hidden md:block">
                         {user ? (
-                            <ProfileMenu user={user} />
+                            <div className="flex items-center gap-4">
+                                <NotificationBell />
+                                <ProfileMenu user={user} />
+                            </div>
                         ) : (
                             <div className="flex items-center space-x-4">
                                 <Link href="/login">
@@ -102,8 +106,9 @@ const Navbar = () => {
                         )}
                     </div>
 
-                    {/* Mobile menu button */}
-                    <div className="md:hidden">
+                    {/* Mobile: Notification + menu button */}
+                    <div className="md:hidden flex items-center gap-1">
+                        {user && <NotificationBell />}
                         <button
                             onClick={() => setIsOpen(!isOpen)}
                             className="inline-flex items-center justify-center rounded-xl p-2 text-slate-600 transition-colors active:bg-slate-100 dark:text-slate-300 dark:active:bg-slate-800"
