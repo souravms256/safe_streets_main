@@ -132,25 +132,19 @@ export default function ReportPage() {
                                         </label>
                                     </div>
                                     {/* Desktop: Original combined upload area */}
-                                    <div
+                                    <label
+                                        htmlFor="file-upload-desktop"
                                         className="hidden md:flex h-48 w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-white p-6 text-center transition-all hover:border-blue-500 hover:bg-blue-50/50 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-blue-400 dark:hover:bg-blue-900/10">
-                                        <div className="text-center">
-                                            <svg className="mx-auto h-12 w-12 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            </svg>
-                                            <div className="mt-4 flex text-sm leading-6 text-slate-600 dark:text-slate-400">
-                                                <label
-                                                    htmlFor="file-upload-desktop"
-                                                    className="relative cursor-pointer rounded bg-transparent font-semibold text-blue-600 focus-within:outline-none hover:text-blue-500"
-                                                >
-                                                    <span>Upload a file</span>
-                                                    <input id="file-upload-desktop" name="file-upload" type="file" className="sr-only" accept="image/*" onChange={handleFileChange} />
-                                                </label>
-                                                <p className="pl-1">or drag and drop</p>
-                                            </div>
+                                        <svg className="mx-auto h-12 w-12 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                        <div className="mt-4 text-sm leading-6 text-slate-600 dark:text-slate-400">
+                                            <span className="font-semibold text-blue-600 hover:text-blue-500">Upload a file</span>
+                                            <span className="pl-1">or take a photo</span>
                                         </div>
-                                    </div>
+                                        <input id="file-upload-desktop" type="file" className="sr-only" accept="image/*" capture="environment" onChange={handleFileChange} />
+                                    </label>
                                 </div>
                             ) : (
                                 <div className="relative h-48 w-full overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
