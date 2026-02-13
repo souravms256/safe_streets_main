@@ -1,6 +1,9 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
+import { motion } from "framer-motion";
 
 /**
  * Slim minimalist footer for SafeStreets.
@@ -8,7 +11,13 @@ import { ShieldCheck } from "lucide-react";
  */
 const Footer = () => {
     return (
-        <footer className="bg-white border-t border-slate-200 dark:bg-slate-950 dark:border-slate-800/60 transition-all duration-300">
+        <motion.footer
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            viewport={{ once: true }}
+            className="bg-white border-t border-slate-200 dark:bg-slate-950 dark:border-slate-800/60 transition-all duration-300"
+        >
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div className="flex flex-col md:flex-row items-center justify-between py-6 gap-6">
 
@@ -21,7 +30,7 @@ const Footer = () => {
                             </span>
                         </Link>
                         <div className="h-4 w-px bg-slate-200 dark:bg-slate-800 hidden md:block" />
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">
+                        <p suppressHydrationWarning className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">
                             &copy; {new Date().getFullYear()} Global Community
                         </p>
                     </div>
@@ -38,7 +47,7 @@ const Footer = () => {
                     </div>
                 </div>
             </div>
-        </footer>
+        </motion.footer>
     );
 };
 

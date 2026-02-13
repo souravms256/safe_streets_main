@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Bell, CheckCircle2, AlertCircle, Clock } from "lucide-react";
+import { Bell, CheckCircle2, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import api from "@/services/api";

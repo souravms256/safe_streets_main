@@ -4,8 +4,6 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/services/api";
 import {
-    User,
-    Mail,
     Shield,
     Calendar,
     Clock,
@@ -29,6 +27,7 @@ interface UserProfile {
     role: string;
     date_of_birth: string;
     created_at: string;
+    points?: number;
 }
 
 export default function ProfilePage() {
@@ -175,7 +174,7 @@ export default function ProfilePage() {
             <div className="relative z-50 mx-auto max-w-lg px-4 -mt-5">
                 <div className="grid grid-cols-3 gap-3">
                     <div className="rounded-2xl bg-white p-3 text-center shadow-lg shadow-slate-200/50 dark:bg-slate-900 dark:shadow-none">
-                        <p className="text-lg md:text-xl font-bold text-amber-500 dark:text-amber-400">{(user as any)?.points ?? 0}</p>
+                        <p className="text-lg md:text-xl font-bold text-amber-500 dark:text-amber-400">{user?.points ?? 0}</p>
                         <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mt-0.5">Points</p>
                     </div>
                     <div className="rounded-2xl bg-white p-3 text-center shadow-lg shadow-slate-200/50 dark:bg-slate-900 dark:shadow-none">

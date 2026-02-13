@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Image from "next/image";
 
 interface Detection {
     class: string;
@@ -108,12 +109,12 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                             <li key={violation.id} className="p-4 active:bg-slate-50 dark:active:bg-slate-800/50 transition-colors">
                                 <div className="flex gap-4">
                                     {/* Thumbnail */}
-                                    <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800">
-                                        <img
+                                    <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800">
+                                        <Image
                                             src={violation.image_url}
                                             alt="Proof"
-                                            className="h-full w-full object-cover"
-                                            loading="lazy"
+                                            fill
+                                            className="object-cover"
                                         />
                                     </div>
 
@@ -198,11 +199,12 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                             {paginatedViolations.map((violation) => (
                                 <tr key={violation.id}>
                                     <td className="whitespace-nowrap px-6 py-4">
-                                        <div className="h-16 w-16 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
-                                            <img
+                                        <div className="relative h-16 w-16 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+                                            <Image
                                                 src={violation.image_url}
                                                 alt="Proof"
-                                                className="h-full w-full object-cover"
+                                                fill
+                                                className="object-cover"
                                             />
                                         </div>
                                     </td>
@@ -346,11 +348,13 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                         {/* Body */}
                         <div className="p-6 space-y-6">
                             {/* Violation Image */}
-                            <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
-                                <img
+                            <div className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 min-h-[200px]">
+                                <Image
                                     src={selectedViolation.image_url}
                                     alt="Evidence"
-                                    className="w-full max-h-[300px] object-contain bg-slate-100 dark:bg-slate-800"
+                                    width={800}
+                                    height={600}
+                                    className="w-full h-auto object-contain bg-slate-100 dark:bg-slate-800"
                                 />
                             </div>
 

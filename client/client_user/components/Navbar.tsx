@@ -8,10 +8,18 @@ import ProfileMenu from "./ProfileMenu";
 import NotificationBell from "./NotificationBell";
 import api from "@/services/api";
 import { Menu, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+
+interface User {
+    id: string;
+    email: string;
+    full_name: string;
+    role: string;
+}
 
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
-    const [user, setUser] = useState<any>(null);
+    const [user, setUser] = useState<User | null>(null);
     const pathname = usePathname();
     const router = useRouter();
 
@@ -53,7 +61,12 @@ const Navbar = () => {
     const isActive = (path: string) => pathname === path;
 
     return (
-        <nav className="fixed top-0 left-0 right-0 z-[2000] border-b border-slate-200/80 bg-white/90 backdrop-blur-xl pt-[env(safe-area-inset-top)] dark:border-slate-800/80 dark:bg-slate-900/90">
+        <motion.nav
+            initial={{ y: -100 }}
+            animate={{ y: 0 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="fixed top-0 left-0 right-0 z-[2000] border-b border-slate-200/80 bg-white/90 backdrop-blur-xl pt-[env(safe-area-inset-top)] dark:border-slate-800/80 dark:bg-slate-900/90"
+        >
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div className="flex h-14 md:h-16 items-center justify-between">
                     {/* Logo */}
@@ -125,55 +138,62 @@ const Navbar = () => {
             </div>
 
             {/* Mobile Menu — slide down */}
-            <div
-                className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? "max-h-[400px] opacity-100" : "max-h-0 opacity-0"
-                    }`}
-            >
-                <div className="space-y-1 bg-white px-4 pt-2 pb-4 shadow-lg dark:bg-slate-900">
-                    {activeLinks.map((link) => (
-                        <Link
-                            key={link.name}
-                            href={link.href}
-                            className={`block rounded-xl px-3 py-2.5 text-base font-medium transition-colors active:scale-[0.98] ${isActive(link.href)
-                                ? "bg-blue-50 text-blue-600 dark:bg-slate-800 dark:text-blue-500"
-                                : "text-slate-600 hover:bg-slate-50 hover:text-blue-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-blue-400"
-                                }`}
-                        >
-                            {link.name}
-                        </Link>
-                    ))}
-                    {user ? (
-                        <div className="mt-3 flex flex-col space-y-2 border-t border-slate-200 px-3 pt-3 dark:border-slate-800">
-                            <Link href="/profile">
-                                <Button variant="ghost" className="w-full justify-start text-left">
-                                    My Profile
-                                </Button>
-                            </Link>
-                            <Button
-                                variant="ghost"
-                                onClick={handleLogout}
-                                className="w-full justify-start text-left text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
-                            >
-                                Sign out
-                            </Button>
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3, ease: "easeInOut" }}
+                        className="md:hidden overflow-hidden bg-white shadow-lg dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800"
+                    >
+                        <div className="space-y-1 px-4 pt-2 pb-4">
+                            {activeLinks.map((link) => (
+                                <Link
+                                    key={link.name}
+                                    href={link.href}
+                                    className={`block rounded-xl px-3 py-2.5 text-base font-medium transition-colors active:scale-[0.98] ${isActive(link.href)
+                                        ? "bg-blue-50 text-blue-600 dark:bg-slate-800 dark:text-blue-500"
+                                        : "text-slate-600 hover:bg-slate-50 hover:text-blue-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-blue-400"
+                                        }`}
+                                >
+                                    {link.name}
+                                </Link>
+                            ))}
+                            {user ? (
+                                <div className="mt-3 flex flex-col space-y-2 border-t border-slate-200 px-3 pt-3 dark:border-slate-800">
+                                    <Link href="/profile">
+                                        <Button variant="ghost" className="w-full justify-start text-left">
+                                            My Profile
+                                        </Button>
+                                    </Link>
+                                    <Button
+                                        variant="ghost"
+                                        onClick={handleLogout}
+                                        className="w-full justify-start text-left text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
+                                    >
+                                        Sign out
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div className="mt-3 flex flex-col space-y-2 border-t border-slate-200 px-3 pt-3 dark:border-slate-800">
+                                    <Link href="/login">
+                                        <Button variant="ghost" className="w-full justify-start">
+                                            Log in
+                                        </Button>
+                                    </Link>
+                                    <Link href="/register">
+                                        <Button variant="primary" className="w-full">
+                                            Sign up
+                                        </Button>
+                                    </Link>
+                                </div>
+                            )}
                         </div>
-                    ) : (
-                        <div className="mt-3 flex flex-col space-y-2 border-t border-slate-200 px-3 pt-3 dark:border-slate-800">
-                            <Link href="/login">
-                                <Button variant="ghost" className="w-full justify-start">
-                                    Log in
-                                </Button>
-                            </Link>
-                            <Link href="/register">
-                                <Button variant="primary" className="w-full">
-                                    Sign up
-                                </Button>
-                            </Link>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </nav>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </motion.nav>
     );
 };
 

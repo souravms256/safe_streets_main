@@ -16,12 +16,20 @@ import {
     Clock,
     Plus,
     LayoutDashboard,
-    AlertCircle,
-    TrendingUp,
-    CheckCircle,
-    Trophy
+    AlertCircle
 } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
+
+interface Violation {
+    id: string;
+    image_url: string;
+    violation_type: string;
+    status: string;
+    location: string;
+    address?: string;
+    timestamp: string;
+    created_at: string;
+}
 
 const container = {
     hidden: { opacity: 0 },
@@ -41,7 +49,7 @@ const item = {
 export default function DashboardPage() {
     const router = useRouter();
     const [user, setUser] = React.useState<{ full_name: string; role: string; points?: number } | null>(null);
-    const [violations, setViolations] = React.useState<any[]>([]);
+    const [violations, setViolations] = React.useState<Violation[]>([]);
     const [loading, setLoading] = React.useState(true);
 
     const fetchData = React.useCallback(async () => {

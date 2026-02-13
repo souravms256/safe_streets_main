@@ -11,17 +11,33 @@ import {
     Filter,
     Flame,
     Search,
-    ChevronRight,
     X,
     TrendingUp,
     MapPin,
-    Settings,
-    List,
     AlertTriangle
 } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
+
+interface Violation {
+    id: string;
+    image_url: string;
+    violation_type: string;
+    status: string;
+    location: string;
+    address?: string;
+    timestamp: string;
+    created_at: string;
+    user_id: string;
+}
+
+interface User {
+    user_id: string;
+    full_name: string;
+    email: string;
+    role: string;
+}
 
 // Dynamically import Map component for SSR
 const Map = dynamic(() => import("@/components/Map"), {
@@ -35,10 +51,10 @@ const Map = dynamic(() => import("@/components/Map"), {
 
 export default function MapPage() {
     const router = useRouter();
-    const [allViolations, setAllViolations] = useState<any[]>([]);
-    const [filteredViolations, setFilteredViolations] = useState<any[]>([]);
+    const [allViolations, setAllViolations] = useState<Violation[]>([]);
+    const [filteredViolations, setFilteredViolations] = useState<Violation[]>([]);
     const [loading, setLoading] = useState(true);
-    const [user, setUser] = useState<any>(null);
+    const [user, setUser] = useState<User | null>(null);
     const [showHeatmap, setShowHeatmap] = useState(false);
     const [mapTheme, setMapTheme] = useState<'streets' | 'dark' | 'satellite'>('dark');
     const [showSidebar, setShowSidebar] = useState(false); // Default closed on mobile

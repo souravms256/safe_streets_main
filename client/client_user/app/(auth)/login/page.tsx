@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/Input";
 import api from "@/services/api";
 import { Eye, EyeOff } from "lucide-react";
 import PageTransition from "@/components/PageTransition";
+import { AxiosError } from "axios";
 
 export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
@@ -32,8 +33,9 @@ export default function LoginPage() {
             localStorage.setItem("refresh_token", refresh_token);
 
             router.push("/dashboard");
-        } catch (err: any) {
-            setError(err.response?.data?.detail || "Login failed. Please try again.");
+        } catch (err) {
+            const axiosError = err as AxiosError<{ detail: string }>;
+            setError(axiosError.response?.data?.detail || "Login failed. Please try again.");
         } finally {
             setIsLoading(false);
         }

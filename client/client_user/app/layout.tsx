@@ -5,7 +5,6 @@ import Navbar from "@/components/Navbar";
 import BottomNav from "@/components/BottomNav";
 import Footer from "@/components/Footer";
 import { Toaster } from "react-hot-toast";
-import Script from "next/script";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import ThemeProvider from "@/components/ThemeProvider";
 

@@ -1,10 +1,15 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useCallback } from "react";
+import Image from "next/image";
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet.heat";
+
+declare module 'leaflet' {
+    function heatLayer(latlngs: [number, number, number][], options: Record<string, unknown>): L.Layer;
+}
 
 // Fix Leaflet default icon issues in Next.js
 const DefaultIcon = L.icon({
@@ -49,7 +54,7 @@ interface MapProps {
 function MapController({ violations, onViewChange }: { violations: Violation[], onViewChange?: (stats: { visibleCount: number }) => void }) {
     const map = useMap();
 
-    const updateStats = () => {
+    const updateStats = useCallback(() => {
         if (!onViewChange) return;
         const bounds = map.getBounds();
         const visibleViolations = violations.filter(v => {
@@ -57,7 +62,7 @@ function MapController({ violations, onViewChange }: { violations: Violation[], 
             return bounds.contains([lat, lon]);
         });
         onViewChange({ visibleCount: visibleViolations.length });
-    };
+    }, [violations, onViewChange, map]);
 
     useMapEvents({
         moveend: updateStats,
@@ -65,9 +70,10 @@ function MapController({ violations, onViewChange }: { violations: Violation[], 
     });
 
     useEffect(() => {
-        const handleMove = (e: any) => {
-            if (e.detail && Array.isArray(e.detail)) {
-                map.setView(e.detail as [number, number], 16, { animate: true });
+        const handleMove = (e: Event) => {
+            const customEvent = e as CustomEvent<[number, number]>;
+            if (customEvent.detail && Array.isArray(customEvent.detail)) {
+                map.setView(customEvent.detail as [number, number], 16, { animate: true });
             }
         };
         window.addEventListener('map-move', handleMove);
@@ -92,7 +98,7 @@ function MapController({ violations, onViewChange }: { violations: Violation[], 
             }
             updateStats();
         }
-    }, [violations, map]);
+    }, [violations, map, updateStats]);
 
     return null;
 }
@@ -108,7 +114,7 @@ function HeatmapLayer({ violations }: { violations: Violation[] }) {
             })
             .filter(p => !isNaN(p[0]) && !isNaN(p[1]));
 
-        const heatLayer = (L as any).heatLayer(points, {
+        const heatLayer = L.heatLayer(points, {
             radius: 25,
             blur: 15,
             maxZoom: 17,
@@ -162,9 +168,10 @@ export default function Map({ violations, showHeatmap = false, theme = 'streets'
                         <Popup className="premium-popup">
                             <div className="p-0.5 min-w-[220px]">
                                 <div className="relative h-28 w-full mb-3 overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
-                                    <img
+                                    <Image
                                         src={violation.image_url}
-                                        className="h-full w-full object-cover transition-transform duration-500 hover:scale-110"
+                                        fill
+                                        className="object-cover transition-transform duration-500 hover:scale-110"
                                         alt="Violation"
                                     />
                                     {isMyReport && (

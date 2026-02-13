@@ -2,7 +2,6 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import {
     LayoutDashboard,
@@ -24,7 +23,6 @@ interface ProfileMenuProps {
 export default function ProfileMenu({ user }: ProfileMenuProps) {
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
-    const router = useRouter();
 
     const toggleMenu = () => setIsOpen(!isOpen);
 

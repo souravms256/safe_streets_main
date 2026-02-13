@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Map, PlusCircle, User } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function BottomNav() {
     const pathname = usePathname();
@@ -28,7 +29,12 @@ export default function BottomNav() {
     ];
 
     return (
-        <nav className="fixed bottom-0 left-0 right-0 z-[3000] block md:hidden">
+        <motion.nav
+            initial={{ y: 100 }}
+            animate={{ y: 0 }}
+            transition={{ type: "spring", stiffness: 260, damping: 20 }}
+            className="fixed bottom-0 left-0 right-0 z-[3000] block md:hidden"
+        >
             <div className="flex items-center justify-around border-t border-slate-200/80 bg-white/95 px-2 backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-900/95"
                 style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 8px)", paddingTop: "8px" }}>
                 {navItems.map((item) => {
@@ -37,29 +43,37 @@ export default function BottomNav() {
                         <Link
                             key={item.name}
                             href={item.href}
-                            className={`relative flex flex-col items-center gap-0.5 transition-all duration-200 active:scale-90 ${item.isFab
-                                ? "-mt-7 rounded-full bg-blue-600 p-3.5 text-white shadow-lg shadow-blue-500/30 active:bg-blue-700 active:shadow-blue-500/40"
-                                : active
-                                    ? "text-blue-600 dark:text-blue-500"
-                                    : "text-slate-400 dark:text-slate-500"
-                                }`}
+                            className={`relative flex flex-col items-center gap-0.5`}
                         >
-                            <item.icon className={item.isFab ? "h-5 w-5" : "h-5 w-5"} strokeWidth={active && !item.isFab ? 2.5 : 1.5} />
-                            {!item.isFab && (
-                                <>
+                            <motion.div
+                                whileTap={{ scale: 0.9 }}
+                                className={`flex flex-col items-center transition-colors ${item.isFab
+                                    ? "-mt-7 rounded-full bg-blue-600 p-3.5 text-white shadow-lg shadow-blue-500/30"
+                                    : active
+                                        ? "text-blue-600 dark:text-blue-500"
+                                        : "text-slate-400 dark:text-slate-500"
+                                    }`}
+                            >
+                                <item.icon className={item.isFab ? "h-5 w-5" : "h-5 w-5"} strokeWidth={active && !item.isFab ? 2.5 : 1.5} />
+                                {!item.isFab && (
                                     <span className={`text-[10px] leading-tight ${active ? "font-bold" : "font-medium"}`}>
                                         {item.name}
                                     </span>
-                                    {/* Active indicator dot */}
-                                    {active && (
-                                        <span className="absolute -bottom-1.5 h-1 w-1 rounded-full bg-blue-600 dark:bg-blue-500" />
-                                    )}
-                                </>
+                                )}
+                            </motion.div>
+
+                            {/* Active indicator dot */}
+                            {!item.isFab && active && (
+                                <motion.span
+                                    layoutId="bottomNavIndicator"
+                                    className="absolute -bottom-1.5 h-1 w-1 rounded-full bg-blue-600 dark:bg-blue-500"
+                                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                />
                             )}
                         </Link>
                     );
                 })}
             </div>
-        </nav>
+        </motion.nav>
     );
 }

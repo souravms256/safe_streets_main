@@ -1,5 +1,5 @@
 import React from "react";
-import { Divide, LucideIcon } from "lucide-react";
+import { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
 interface EmptyStateProps {

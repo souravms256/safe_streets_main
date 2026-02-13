@@ -5,12 +5,10 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+  /* 
+   * Strict Error Checking Enabled 
+   * The user wants to see and fix all errors. 
+   */
 };
 
 export default nextConfig;

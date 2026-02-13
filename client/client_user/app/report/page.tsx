@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/services/api";
 import { Button } from "@/components/ui/Button";
+import Image from "next/image";
 import toast from "react-hot-toast";
 import { compressImage, needsCompression, blobToFile, getFileSizeMB } from "@/services/imageCompression";
 
@@ -148,7 +149,12 @@ export default function ReportPage() {
                                 </div>
                             ) : (
                                 <div className="relative h-48 w-full overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
-                                    <img src={preview} alt="Preview" className="h-full w-full object-cover" />
+                                    <Image
+                                        src={preview}
+                                        alt="Preview"
+                                        fill
+                                        className="object-cover"
+                                    />
                                     <button
                                         type="button"
                                         onClick={() => {
