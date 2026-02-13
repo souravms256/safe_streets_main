@@ -22,7 +22,7 @@ def show_all_users(admin=Depends(get_current_admin)):
     Only accessible by users with role='admin'.
     """
     users = supabase.table("profiles").select(
-        "id, full_name, email, dob, role, created_at"
+        "id, full_name, email, dob, role, created_at, points"
     ).eq("role", "user").execute().data
     return users
 

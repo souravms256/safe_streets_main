@@ -71,6 +71,9 @@ export default function UsersPage() {
         } else if (sortConfig.key === 'role') {
             aValue = a.role;
             bValue = b.role;
+        } else if (sortConfig.key === 'points') {
+            aValue = a.points || 0;
+            bValue = b.points || 0;
         }
 
         if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
@@ -126,6 +129,9 @@ export default function UsersPage() {
                                 <th className="px-6 py-3 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('role')}>
                                     Role {sortConfig?.key === 'role' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                                 </th>
+                                <th className="px-6 py-3 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('points')}>
+                                    Points {sortConfig?.key === 'points' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                </th>
                                 <th className="px-6 py-3 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('created_at')}>
                                     Joined {sortConfig?.key === 'created_at' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                                 </th>
@@ -151,6 +157,9 @@ export default function UsersPage() {
                                             {user.role}
                                         </span>
                                     </td>
+                                    <td className="px-6 py-4">
+                                        <span className="font-medium text-amber-400">{user.points || 0}</span>
+                                    </td>
                                     <td className="px-6 py-4 text-gray-500 font-mono text-xs">
                                         {formatDate(user.created_at)}
                                     </td>
@@ -169,7 +178,7 @@ export default function UsersPage() {
                             ))}
                             {paginatedUsers.length === 0 && (
                                 <tr>
-                                    <td colSpan={4} className="p-8 text-center text-gray-500">
+                                    <td colSpan={5} className="p-8 text-center text-gray-500">
                                         No users found matching search.
                                     </td>
                                 </tr>

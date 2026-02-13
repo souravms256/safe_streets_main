@@ -183,7 +183,11 @@ export default function UserDetailPage() {
                     <CardHeader>
                         <CardTitle className="text-base font-medium text-gray-200">Activity Overview</CardTitle>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-3 gap-4">
+                    <CardContent className="grid grid-cols-4 gap-4">
+                        <div className="p-4 rounded-lg bg-gray-900/50 border border-gray-800">
+                            <span className="block text-xs text-gray-500 mb-1">Total Points</span>
+                            <span className="text-2xl font-bold text-amber-400">{user.points ?? 0}</span>
+                        </div>
                         <div className="p-4 rounded-lg bg-gray-900/50 border border-gray-800">
                             <span className="block text-xs text-gray-500 mb-1">Total Reports</span>
                             <span className="text-2xl font-bold text-white">{stats.total_reports}</span>

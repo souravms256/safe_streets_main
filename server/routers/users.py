@@ -11,7 +11,7 @@ def me(current_user=Depends(get_current_user)):
     Accessible to any authenticated user.
     """
     user = supabase.table("profiles").select(
-        "id, full_name, email, dob, role, created_at"
+        "id, full_name, email, dob, role, created_at, points"
     ).eq("id", current_user["user_id"]).single().execute().data
     return user
 

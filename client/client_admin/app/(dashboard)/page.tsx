@@ -194,7 +194,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Charts Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 [&>*]:min-w-0">
                 {reports_over_time && <AnalyticsChart data={reports_over_time} />}
                 {reports_by_type && <TypeChart data={reports_by_type} />}
             </div>

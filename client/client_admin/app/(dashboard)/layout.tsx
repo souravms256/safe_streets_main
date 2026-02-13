@@ -143,7 +143,7 @@ export default function DashboardLayout({
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 md:ml-72 relative z-10">
+            <main className="flex-1 min-w-0 md:ml-72 relative z-10">
                 {/* Mobile Header */}
                 <div className="sticky top-0 z-40 flex items-center gap-4 h-16 px-4 border-b border-white/5 bg-black/80 backdrop-blur-xl md:hidden">
                     <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600">
