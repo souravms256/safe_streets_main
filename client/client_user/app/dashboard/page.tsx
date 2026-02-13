@@ -77,12 +77,6 @@ export default function DashboardPage() {
 
     const stats = [
         {
-            label: "Total Points",
-            value: user?.points ?? 0,
-            icon: Trophy,
-            color: "amber"
-        },
-        {
             label: "Total Reports",
             value: violations.length,
             icon: FileText,
@@ -134,7 +128,7 @@ export default function DashboardPage() {
                         variants={container}
                         initial="hidden"
                         animate="show"
-                        className="grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-4"
+                        className="grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-3"
                     >
                         {stats.map((stat, index) => (
                             <motion.div
@@ -148,7 +142,6 @@ export default function DashboardPage() {
                                         {stat.label}
                                     </h3>
                                     <span className={`p-2.5 rounded-xl transition-colors
-                                    ${stat.color === 'amber' ? 'bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400 group-hover:bg-amber-100' : ''}
                                     ${stat.color === 'blue' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 group-hover:bg-blue-100' : ''}
                                     ${stat.color === 'green' ? 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400 group-hover:bg-green-100' : ''}
                                     ${stat.color === 'yellow' ? 'bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400 group-hover:bg-yellow-100' : ''}
@@ -160,7 +153,6 @@ export default function DashboardPage() {
                                     {stat.value}
                                 </p>
                                 <div className={`absolute bottom-0 left-0 h-1 w-full transition-all scale-x-0 group-hover:scale-x-100
-                                ${stat.color === 'amber' ? 'bg-amber-500' : ''}
                                 ${stat.color === 'blue' ? 'bg-blue-500' : ''}
                                 ${stat.color === 'green' ? 'bg-green-500' : ''}
                                 ${stat.color === 'yellow' ? 'bg-yellow-500' : ''}
