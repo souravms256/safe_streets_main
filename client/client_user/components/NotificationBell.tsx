@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Bell, CheckCircle2, AlertCircle, Clock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
 import api from "@/services/api";
 
 interface Notification {
@@ -18,8 +19,10 @@ const NotificationBell = () => {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const router = useRouter();
 
     const unreadCount = notifications.filter((n) => !n.is_read).length;
+    const previewNotifications = notifications.slice(0, 3);
 
     const fetchNotifications = async () => {
         try {
@@ -103,7 +106,7 @@ const NotificationBell = () => {
                             )}
                         </div>
 
-                        <div className="max-h-[380px] overflow-y-auto overflow-x-hidden p-2">
+                        <div className="overflow-y-auto overflow-x-hidden p-2">
                             {notifications.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
                                     <div className="mb-3 rounded-full bg-slate-50 p-3 dark:bg-slate-800">
@@ -114,7 +117,7 @@ const NotificationBell = () => {
                                 </div>
                             ) : (
                                 <div className="space-y-1">
-                                    {notifications.map((n) => (
+                                    {previewNotifications.map((n) => (
                                         <div
                                             key={n.id}
                                             onClick={() => !n.is_read && markAsRead(n.id)}
@@ -148,11 +151,19 @@ const NotificationBell = () => {
                             )}
                         </div>
 
-                        <div className="border-t border-slate-100 p-2 dark:border-slate-800">
-                            <button className="w-full rounded-lg py-2 text-center text-[10px] font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                                View all activity
-                            </button>
-                        </div>
+                        {notifications.length > 0 && (
+                            <div className="border-t border-slate-100 p-2 dark:border-slate-800">
+                                <button
+                                    onClick={() => {
+                                        setIsOpen(false);
+                                        router.push("/notifications");
+                                    }}
+                                    className="w-full rounded-lg py-2 text-center text-[10px] font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                                >
+                                    View all activity
+                                </button>
+                            </div>
+                        )}
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -161,3 +172,4 @@ const NotificationBell = () => {
 };
 
 export default NotificationBell;
+
