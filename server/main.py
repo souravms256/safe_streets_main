@@ -13,6 +13,7 @@ from routers.admin_auth import router as admin_auth_router
 from routers.health import router as health_router
 from routers.violations import router as violations_router
 from routers.notifications import router as notifications_router
+from routers.geocode import router as geocode_router
 
 # Setup structured logging
 setup_logging()
@@ -52,22 +53,28 @@ async def logging_middleware(request: Request, call_next):
 # Global exception handler
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    import traceback
     correlation_id = get_correlation_id()
-    api_logger.error(f"Unhandled exception: {str(exc)}", exc_info=True)
+    error_traceback = traceback.format_exc()
+    api_logger.error(f"Unhandled exception: {str(exc)}\n{error_traceback}")
     
     return JSONResponse(
         status_code=500,
         content={
-            "detail": "An unexpected error occurred. Please try again later.",
+            "detail": str(exc),
+            "traceback": error_traceback, # Include full traceback for the user to see
             "correlation_id": correlation_id
         },
-        headers={"X-Correlation-ID": correlation_id}
+        headers={
+            "X-Correlation-ID": correlation_id,
+            "Access-Control-Allow-Origin": "*"
+        }
     )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
+    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["X-Correlation-ID"],
@@ -80,6 +87,7 @@ app.include_router(admin_auth_router)
 app.include_router(admin_router)
 app.include_router(violations_router)
 app.include_router(notifications_router)
+app.include_router(geocode_router)
 
 @app.get("/")
 def root():

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'safestreets-v2';
+const CACHE_NAME = 'safestreets-v3';
 const STATIC_ASSETS = [
     '/',
     '/manifest.json',
@@ -40,6 +40,9 @@ self.addEventListener('fetch', (event) => {
 
     // Skip non-GET requests
     if (request.method !== 'GET') return;
+
+    // Skip blob: and data: URLs — these are in-memory and must not be intercepted
+    if (request.url.startsWith('blob:') || request.url.startsWith('data:')) return;
 
     // Skip API requests and external origins - always go to network
     if (request.url.includes('/api/') || request.url.includes(':8000') || url.origin !== self.location.origin) {

@@ -40,6 +40,11 @@ interface Violation {
     status: string;
     address?: string;
     image_url: string;
+    details?: {
+        address?: string;
+        short_address?: string;
+        [key: string]: unknown;
+    };
 }
 
 interface MapProps {
@@ -183,7 +188,7 @@ export default function Map({ violations, showHeatmap = false, theme = 'streets'
                                 <div className="px-1 pb-1">
                                     <h3 className="font-bold text-slate-900 leading-tight mb-1">{violation.violation_type}</h3>
                                     <p className="text-[11px] text-slate-500 mb-2 font-medium line-clamp-2">
-                                        {violation.address || violation.location}
+                                        {violation.details?.short_address || violation.details?.address || violation.address || violation.location}
                                     </p>
                                     <div className="flex items-center justify-between gap-2">
                                         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider

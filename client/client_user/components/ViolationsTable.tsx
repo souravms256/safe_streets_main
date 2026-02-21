@@ -13,8 +13,20 @@ interface ViolationDetails {
     helmet_violations?: number;
     triple_riding?: boolean;
     rider_count?: number;
+    potholes_detected?: number;
     detections?: Detection[];
     output_image?: string;
+    address?: string;
+    short_address?: string;
+    address_components?: {
+        road?: string;
+        neighbourhood?: string;
+        suburb?: string;
+        city?: string;
+        state?: string;
+        postcode?: string;
+        country?: string;
+    };
 }
 
 interface Violation {
@@ -138,7 +150,7 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                                                 </span>
                                             </div>
                                             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">
-                                                {violation.address || violation.location}
+                                                {violation.details?.short_address || violation.details?.address || violation.address || violation.location}
                                             </p>
                                         </div>
 
@@ -226,8 +238,8 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">
-                                        <div className="max-w-xs overflow-hidden text-ellipsis whitespace-nowrap" title={violation.address || violation.location}>
-                                            {violation.address || violation.location}
+                                        <div className="max-w-xs overflow-hidden text-ellipsis whitespace-nowrap" title={violation.details?.address || violation.address || violation.location}>
+                                            {violation.details?.short_address || violation.details?.address || violation.address || violation.location}
                                         </div>
                                     </td>
                                     <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-500 dark:text-slate-400">
@@ -400,6 +412,12 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                                             </p>
                                             <p className="text-xs text-blue-500 dark:text-blue-400">Riders Detected</p>
                                         </div>
+                                        <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg text-center">
+                                            <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                                                {selectedViolation.details.potholes_detected ?? 0}
+                                            </p>
+                                            <p className="text-xs text-indigo-500 dark:text-indigo-400">Potholes Detected</p>
+                                        </div>
                                     </div>
 
                                     {/* Detections List */}
@@ -411,7 +429,12 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                                             <div className="space-y-2">
                                                 {selectedViolation.details.detections.map((det, idx) => (
                                                     <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                                                        <span className={`font-medium ${det.class === 'no-helmet' || det.class === 'no_helmet' ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                                                        <span className={`font-medium ${det.class === 'no-helmet' || det.class === 'no_helmet'
+                                                            ? 'text-red-600 dark:text-red-400'
+                                                            : det.class === 'pothole'
+                                                                ? 'text-indigo-600 dark:text-indigo-400'
+                                                                : 'text-green-600 dark:text-green-400'
+                                                            }`}>
                                                             {det.class}
                                                         </span>
                                                         <span className="text-sm text-slate-500 dark:text-slate-400">
@@ -431,7 +454,7 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                                     <strong>Date:</strong> {new Date(selectedViolation.created_at).toLocaleString()}
                                 </div>
                                 <div className="col-span-2">
-                                    <strong>Location:</strong> {selectedViolation.address || selectedViolation.location}
+                                    <strong>Location:</strong> {selectedViolation.details?.short_address || selectedViolation.details?.address || selectedViolation.address || selectedViolation.location}
                                 </div>
                             </div>
                         </div>

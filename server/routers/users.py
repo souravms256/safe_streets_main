@@ -10,10 +10,19 @@ def me(current_user=Depends(get_current_user)):
     Get current user profile.
     Accessible to any authenticated user.
     """
-    user = supabase.table("profiles").select(
-        "id, full_name, email, dob, role, created_at, points"
-    ).eq("id", current_user["user_id"]).single().execute().data
-    return user
+    try:
+        response = supabase.table("profiles").select(
+            "id, full_name, email, dob, role, created_at, points"
+        ).eq("id", current_user["user_id"]).single().execute()
+        
+        if not response.data:
+             raise HTTPException(status_code=404, detail="User profile not found")
+             
+        return response.data
+    except Exception as e:
+        # Prevent 500 crash if database fails
+        print(f"Error fetching user profile: {e}") 
+        raise HTTPException(status_code=500, detail="Could not fetch user profile")
 
 @router.get("/leaderboard")
 def get_leaderboard(current_user=Depends(get_current_user)):

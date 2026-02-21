@@ -1,7 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
 from core.dependencies import get_current_user
 from utils.supabase_client import supabase
-from utils.geocoding import get_address
+from utils.geocoding import get_address, get_address_detailed
 from services.detector import detector
 from datetime import datetime
 import uuid
@@ -22,20 +22,22 @@ async def report_violation(
     Upload a new violation report.
     - Uploads image to Supabase Storage
     - Runs AI detection
-    - Resolves human-readable address
+    - Resolves human-readable address (with structured data)
     - Saves record to Database
     """
     
     # 1. Read file content
     contents = await file.read()
     
-    # 2. Run AI Detection
-    detected_type, details = detector.detect(contents)
+    # 2. Run AI Detection (Now returns annotated bytes)
+    detected_type, details, annotated_bytes = detector.detect(contents)
     
-    # 3. Resolve Address (Reverse Geocoding)
-    address = get_address(latitude, longitude)
+    # 3. Resolve Address (Reverse Geocoding — now with structured data)
+    address_data = get_address_detailed(latitude, longitude)
+    address = address_data["display_name"]
+    short_address = address_data["short_address"]
     
-    # 4. Upload to Supabase Storage
+    # 4. Upload Annotated Image to Supabase Storage
     file_ext = file.filename.split(".")[-1]
     file_name = f"{current_user['user_id']}/{uuid.uuid4()}.{file_ext}"
     
@@ -43,7 +45,7 @@ async def report_violation(
         # Upload using standard supabase storage api
         res = supabase.storage.from_(BUCKET_NAME).upload(
             path=file_name,
-            file=contents,
+            file=annotated_bytes,
             file_options={"content-type": file.content_type}
         )
         
@@ -63,9 +65,21 @@ async def report_violation(
         "violation_type": detected_type,
         "status": "Under Review",
         "location": f"{latitude}, {longitude}",
-        # "address": address, # Removed because column missing in DB
         "timestamp": timestamp,
-        "details": {**details, "address": address},
+        "details": {
+            **details,
+            "address": address,
+            "short_address": short_address,
+            "address_components": {
+                "road": address_data.get("road", ""),
+                "neighbourhood": address_data.get("neighbourhood", ""),
+                "suburb": address_data.get("suburb", ""),
+                "city": address_data.get("city", ""),
+                "state": address_data.get("state", ""),
+                "postcode": address_data.get("postcode", ""),
+                "country": address_data.get("country", ""),
+            }
+        },
         "created_at": datetime.utcnow().isoformat()
     }
     
@@ -81,7 +95,9 @@ async def report_violation(
         "message": "Violation reported successfully",
         "violation": result.data[0],
         "detected_type": detected_type,
-        "address": address
+        "address": address,
+        "short_address": short_address,
+        "address_data": address_data
     }
 
 @router.get("/public")

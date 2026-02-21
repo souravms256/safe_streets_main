@@ -15,7 +15,7 @@ class ViolationDetector:
             image_bytes (bytes): The raw bytes of the image file.
             
         Returns:
-            tuple: (violation_type: str, details: dict)
+            tuple: (violation_type: str, details: dict, annotated_image_bytes: bytes)
         """
         try:
             # Prepare file for upload
@@ -28,9 +28,6 @@ class ViolationDetector:
                 try:
                     data = response.json()
                     
-                    # Logic to determine violation type from the specific API response
-                    # New Response format: {'violations': {'helmet_violations': 0, 'triple_riding': False}, ...}
-                    
                     violations_data = data.get("violations", {})
                     violations = []
                     
@@ -42,37 +39,59 @@ class ViolationDetector:
                     if violations_data.get("helmet_violations", 0) > 0:
                         violations.append("Helmet Violation")
 
+                    # Check for Potholes
+                    pothole_count = violations_data.get("potholes_detected", 0)
+                    if pothole_count > 0:
+                        violations.append("Pothole")
+
                     if not violations:
                         violation_type = "No Violation"
                     else:
                         violation_type = ", ".join(violations)
                         
                     # Config parsing for Frontend
-                    # Frontend expects: helmet_violations, triple_riding, rider_count at top level of details
                     data["helmet_violations"] = violations_data.get("helmet_violations", 0)
                     data["triple_riding"] = violations_data.get("triple_riding", False)
-                    data["rider_count"] = data.get("details", {}).get("max_riders_on_bike", 0) # Map from app.py response
+                    data["potholes_detected"] = pothole_count
+                    data["rider_count"] = violations_data.get("rider_count", 0)
                     
-                    # Also flatten detections for easier access if needed, though frontend iterates data.detections (which exists in app.py resp)
-                    # app.py structure: "detections": {"helmets": [...]}
-                    # frontend expects: "detections": [...]
-                    # Let's map detections.helmets -> detections
-                    if "detections" in data and isinstance(data["detections"], dict):
-                         data["detections"] = data["detections"].get("helmets", [])
+                    # Combine all bounding box detections for the frontend
+                    all_detections = data.get("detections", []) # These are helmets from VM
+                    potholes_raw = data.get("road_condition", {}).get("potholes", [])
+                    
+                    # Add class label to potholes if missing and add to main detections list
+                    for p in potholes_raw:
+                        p["class"] = "pothole"
+                        all_detections.append(p)
                         
-                    # Return both the label and the full data object
-                    return violation_type, data
+                    data["detections"] = all_detections
+
+                    # Fetch the Annotated Image from VM
+                    annotated_image_bytes = image_bytes # Default to original if fetch fails
+                    output_url = data.get("output", {}).get("url")
+                    if output_url:
+                        # Construct full URL (assumes output_url is like /output/detect_...)
+                        base_url = settings.MODEL_API_URL.rsplit('/', 1)[0]
+                        full_annotated_url = f"{base_url}{output_url}"
+                        print(f"Fetching annotated image from: {full_annotated_url}")
+                        img_res = requests.get(full_annotated_url, timeout=10)
+                        if img_res.status_code == 200:
+                            annotated_image_bytes = img_res.content
+                            print("Successfully fetched annotated image bytes")
+                        
+                    # Return both the label, the full data object, and the annotated image
+                    return violation_type, data, annotated_image_bytes
                     
                 except Exception as e:
                    print(f"Error parsing model response: {e}")
                    # Fallback
-                   return "Detection Failed", {"error": "Parse Error", "raw": response.text}
+                   return "Detection Failed", {"error": "Parse Error", "raw": response.text}, image_bytes
             else:
                 print(f"Model API error: {response.status_code} - {response.text}")
-                return "Detection Failed", {"error": f"API Error {response.status_code}", "raw": response.text}
+                return "Detection Failed", {"error": f"API Error {response.status_code}", "raw": response.text}, image_bytes
 
         except Exception as e:
             print(f"Error calling AI model: {e}")
-            return "AI Service Unavailable", {}
+            return "AI Service Unavailable", {}, image_bytes
 
 detector = ViolationDetector()

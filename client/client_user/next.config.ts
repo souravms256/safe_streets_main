@@ -1,14 +1,16 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: 'export',
+  output: 'export',  // Enable only for production static build
   images: {
     unoptimized: true,
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.supabase.co',
+      },
+    ],
   },
-  /* 
-   * Strict Error Checking Enabled 
-   * The user wants to see and fix all errors. 
-   */
 };
 
 export default nextConfig;

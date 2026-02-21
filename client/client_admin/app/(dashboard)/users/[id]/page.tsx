@@ -253,7 +253,7 @@ export default function UserDetailPage() {
                                             <td className="px-6 py-4 max-w-[200px]">
                                                 <div className="flex flex-col">
                                                     <span className="truncate text-gray-400 text-xs" title={violation.location}>
-                                                        {violation.details?.address || violation.location}
+                                                        {violation.details?.short_address || violation.details?.address || violation.location}
                                                     </span>
                                                     <a
                                                         href={`https://maps.google.com/?q=${violation.location}`}
