@@ -90,22 +90,43 @@ async def report_violation(
     address = address_data["display_name"]
     short_address = address_data["short_address"]
 
-    # 3. Upload primary (annotated) image
+    # 3. Upload primary images (both annotated and original)
     file_ext = primary_file.filename.split(".")[-1] if primary_file.filename else "jpg"
-    file_name = f"{current_user['user_id']}/{uuid.uuid4()}.{file_ext}"
+    base_uuid = str(uuid.uuid4())
 
+    # Upload annotated image (for UI display)
+    annotated_file_name = f"{current_user['user_id']}/{base_uuid}.{file_ext}"
     try:
         supabase.storage.from_(BUCKET_NAME).upload(
-            path=file_name,
+            path=annotated_file_name,
             file=annotated_bytes,
             file_options={"content-type": primary_file.content_type},
         )
-        public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(file_name)
+        public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(
+            annotated_file_name
+        )
     except Exception as e:
         import traceback
 
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Image upload failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Annotated image upload failed: {str(e)}"
+        )
+
+    # Upload original raw image (for Active Learning retraining)
+    original_file_name = f"{current_user['user_id']}/{base_uuid}_original.{file_ext}"
+    try:
+        supabase.storage.from_(BUCKET_NAME).upload(
+            path=original_file_name,
+            file=contents,
+            file_options={"content-type": primary_file.content_type},
+        )
+        original_url = supabase.storage.from_(BUCKET_NAME).get_public_url(
+            original_file_name
+        )
+    except Exception as e:
+        print(f"Original raw image upload failed (non-fatal): {e}")
+        original_url = None
 
     # 4. Upload additional images (if any)
     additional_urls = []
@@ -140,6 +161,7 @@ async def report_violation(
     violation_details = {
         **details,
         **user_input,
+        "original_image": original_url,
         "address": address,
         "short_address": short_address,
         "address_components": {
