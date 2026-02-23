@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import toast from "react-hot-toast";
 
 export default function ContactPage() {
     const [isLoading, setIsLoading] = useState(false);
@@ -13,19 +14,19 @@ export default function ContactPage() {
         // Simulate submission
         setTimeout(() => {
             setIsLoading(false);
-            alert("Message sent! (Simulation)");
+            toast.success("Message sent successfully!");
         }, 1500);
     };
 
     return (
-        <div className="bg-white py-24 sm:py-32 dark:bg-slate-950">
+        <div className="bg-white py-12 md:py-24 sm:py-32 dark:bg-slate-950">
             <div className="mx-auto max-w-7xl px-6 lg:px-8">
                 <div className="mx-auto max-w-2xl text-center">
                     <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl dark:text-white">
                         Contact Us
                     </h2>
                     <p className="mt-2 text-lg leading-8 text-slate-600 dark:text-slate-400">
-                        Have questions or suggestions? We'd love to hear from you.
+                        Have questions or suggestions? We&apos;d love to hear from you.
                     </p>
                 </div>
                 <div className="mx-auto mt-16 max-w-xl sm:mt-20">

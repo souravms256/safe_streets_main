@@ -1,0 +1,8 @@
+env/
+venv/
+.env
+.DS_Store
+
+# mobile
+ios/
+android/

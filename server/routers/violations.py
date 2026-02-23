@@ -1,85 +1,250 @@
-from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, Request
+from pydantic import BaseModel
+from core.limiter import limiter
 from core.dependencies import get_current_user
 from utils.supabase_client import supabase
+from utils.geocoding import get_address_detailed
 from services.detector import detector
-from datetime import datetime
+from datetime import datetime, timezone
+from typing import List
 import uuid
+from typing import Any, Dict
+
+
+class ViolationResponse(BaseModel):
+    id: str
+    user_id: str
+    image_url: str
+    violation_type: str
+    status: str
+    location: str
+    timestamp: str
+    details: Dict[str, Any]
+    created_at: str
+
+
+class ReportResponse(BaseModel):
+    message: str
+    violation: ViolationResponse
+    detected_type: str
+    address: str
+    short_address: str
+    address_data: Dict[str, Any]
+
+
+class DeleteResponse(BaseModel):
+    message: str
+
 
 router = APIRouter(prefix="/violations", tags=["Violations"])
 
 BUCKET_NAME = "violation-evidence"
 
-@router.post("/")
+
+@router.post("/", response_model=ReportResponse)
+@limiter.limit("5/minute")
 async def report_violation(
-    file: UploadFile = File(...),
+    request: Request,
+    files: List[UploadFile] = File(...),
     latitude: float = Form(...),
     longitude: float = Form(...),
     timestamp: str = Form(...),
-    current_user: dict = Depends(get_current_user)
+    user_violation_type: str = Form(None),
+    description: str = Form(None),
+    severity: str = Form(None),
+    vehicle_number: str = Form(None),
+    current_user: dict = Depends(get_current_user),
 ):
     """
-    Upload a new violation report.
-    - Uploads image to Supabase Storage
-    - Runs AI detection
+    Upload a new violation report with 1–3 images.
+    - First image goes through AI detection
+    - All images uploaded to Supabase Storage
+    - Resolves human-readable address
     - Saves record to Database
     """
-    
-    # 1. Read file content
-    contents = await file.read()
-    
-    # 2. Run AI Detection
-    detected_type = detector.detect(contents)
-    
-    # 3. Upload to Supabase Storage
-    file_ext = file.filename.split(".")[-1]
-    file_name = f"{current_user['user_id']}/{uuid.uuid4()}.{file_ext}"
-    
-    try:
-        # Upload using standard supabase storage api
-        # Note: Ensure the bucket exists and policies allow upload
-        res = supabase.storage.from_(BUCKET_NAME).upload(
-            path=file_name,
-            file=contents,
-            file_options={"content-type": file.content_type}
+    if len(files) > 3:
+        raise HTTPException(
+            status_code=400, detail="Maximum 3 images allowed per report"
         )
-        
-        # Get public URL
+
+    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+    for file in files:
+        if not file.content_type.startswith("image/"):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid file type: {file.filename}. Only images are allowed.",
+            )
+        if getattr(file, "size", 0) and file.size > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File {file.filename} is too large. Max size is 10MB.",
+            )
+
+    # 1. Read primary file and run AI detection on it
+    primary_file = files[0]
+    contents = await primary_file.read()
+    detected_type, details, annotated_bytes = detector.detect(contents)
+
+    # 2. Resolve Address
+    address_data = get_address_detailed(latitude, longitude)
+    address = address_data["display_name"]
+    short_address = address_data["short_address"]
+
+    # 3. Upload primary (annotated) image
+    file_ext = primary_file.filename.split(".")[-1] if primary_file.filename else "jpg"
+    file_name = f"{current_user['user_id']}/{uuid.uuid4()}.{file_ext}"
+
+    try:
+        supabase.storage.from_(BUCKET_NAME).upload(
+            path=file_name,
+            file=annotated_bytes,
+            file_options={"content-type": primary_file.content_type},
+        )
         public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(file_name)
-        
     except Exception as e:
-        print(f"Storage upload failed: {e}")
-        # Fallback or error handling - for now raising HTTP exception
+        import traceback
+
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Image upload failed: {str(e)}")
 
-    # 4. Insert into Database
+    # 4. Upload additional images (if any)
+    additional_urls = []
+    for extra_file in files[1:]:
+        try:
+            extra_contents = await extra_file.read()
+            ext = extra_file.filename.split(".")[-1] if extra_file.filename else "jpg"
+            extra_name = f"{current_user['user_id']}/{uuid.uuid4()}.{ext}"
+            supabase.storage.from_(BUCKET_NAME).upload(
+                path=extra_name,
+                file=extra_contents,
+                file_options={"content-type": extra_file.content_type},
+            )
+            additional_urls.append(
+                supabase.storage.from_(BUCKET_NAME).get_public_url(extra_name)
+            )
+        except Exception as e:
+            print(f"Additional image upload failed: {e}")
+
+    # 5. Build user-provided context
+    user_input = {}
+    if user_violation_type:
+        user_input["user_violation_type"] = user_violation_type
+    if description:
+        user_input["description"] = description
+    if severity:
+        user_input["severity"] = severity
+    if vehicle_number:
+        user_input["vehicle_number"] = vehicle_number
+
+    # 6. Insert into Database
+    violation_details = {
+        **details,
+        **user_input,
+        "address": address,
+        "short_address": short_address,
+        "address_components": {
+            "road": address_data.get("road", ""),
+            "neighbourhood": address_data.get("neighbourhood", ""),
+            "suburb": address_data.get("suburb", ""),
+            "city": address_data.get("city", ""),
+            "state": address_data.get("state", ""),
+            "postcode": address_data.get("postcode", ""),
+            "country": address_data.get("country", ""),
+        },
+    }
+    if additional_urls:
+        violation_details["additional_images"] = additional_urls
+
     violation_data = {
         "user_id": current_user["user_id"],
         "image_url": public_url,
         "violation_type": detected_type,
-        "status": "Under Review",  # Default status
-        "location": f"{latitude}, {longitude}", # storing as simple string for now
+        "status": "Under Review",
+        "location": f"{latitude}, {longitude}",
         "timestamp": timestamp,
-        "created_at": datetime.utcnow().isoformat()
+        "details": violation_details,
+        "created_at": datetime.now(timezone.utc).isoformat(),
     }
-    
+
     try:
         result = supabase.table("violations").insert(violation_data).execute()
     except Exception as e:
-         raise HTTPException(status_code=500, detail=f"Database insert failed: {str(e)}")
+        import traceback
+
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Database insert failed: {str(e)}")
 
     return {
         "message": "Violation reported successfully",
         "violation": result.data[0],
-        "detected_type": detected_type
+        "detected_type": detected_type,
+        "address": address,
+        "short_address": short_address,
+        "address_data": address_data,
     }
 
-@router.get("/")
+
+@router.get("/public", response_model=List[ViolationResponse])
+def get_public_violations():
+    """
+    Fetch all violations for public hotspots (limited fields for privacy).
+    """
+    try:
+        # We select all but can exclude sensitive user_id if needed.
+        # For now, icons need the data to show intensity.
+        response = supabase.table("violations").select("*").execute()
+        return response.data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/", response_model=List[ViolationResponse])
 def get_my_violations(current_user: dict = Depends(get_current_user)):
     """
     Fetch all violations reported by the current user.
     """
     try:
-        response = supabase.table("violations").select("*").eq("user_id", current_user["user_id"]).order("created_at", desc=True).execute()
+        response = (
+            supabase.table("violations")
+            .select("*")
+            .eq("user_id", current_user["user_id"])
+            .order("created_at", desc=True)
+            .execute()
+        )
         return response.data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/{violation_id}", response_model=DeleteResponse)
+def delete_violation(violation_id: str, current_user: dict = Depends(get_current_user)):
+    """
+    Delete a violation report by ID.
+    Only allows users to delete their own reports.
+    """
+    try:
+        # Check if violation exists and belongs to user
+        existing = (
+            supabase.table("violations")
+            .select("user_id")
+            .eq("id", violation_id)
+            .execute()
+        )
+
+        if not existing.data:
+            raise HTTPException(status_code=404, detail="Violation not found")
+
+        if existing.data[0]["user_id"] != current_user["user_id"]:
+            raise HTTPException(
+                status_code=403, detail="Not authorized to delete this report"
+            )
+
+        # Delete from database
+        supabase.table("violations").delete().eq("id", violation_id).execute()
+
+        return {"message": "Violation deleted successfully"}
+
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -3,3 +3,10 @@ uvicorn
 supabase
 python-dotenv
 pydantic
+python-jose[cryptography]
+argon2-cffi
+requests
+python-multipart
+pydantic[email]
+email-validator
+slowapi

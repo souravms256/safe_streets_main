@@ -3,9 +3,22 @@
 import React, { useEffect, useState } from "react";
 import api from "@/services/api";
 
+interface User {
+    id: string;
+    full_name: string;
+    email: string;
+    role: string;
+    created_at: string;
+}
+
+interface Stats {
+    total_users: number;
+    message: string;
+}
+
 export default function AdminPage() {
-    const [users, setUsers] = useState<any[]>([]);
-    const [stats, setStats] = useState<any>(null);
+    const [users, setUsers] = useState<User[]>([]);
+    const [stats, setStats] = useState<Stats | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
