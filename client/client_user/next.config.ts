@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: 'export',  // Enable only for production static build
+  // output: 'export',  // Enable only for production static build
   images: {
     unoptimized: true,
     remotePatterns: [
