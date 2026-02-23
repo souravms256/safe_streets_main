@@ -9,3 +9,4 @@ requests
 python-multipart
 pydantic[email]
 email-validator
+slowapi

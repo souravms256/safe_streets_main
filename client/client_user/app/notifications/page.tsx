@@ -56,8 +56,8 @@ export default function NotificationsPage() {
         }
         fetchNotifications(true);
 
-        // Auto-refresh every 60 seconds
-        const interval = setInterval(() => fetchNotifications(false), 60000);
+        // Auto-refresh every 15 seconds
+        const interval = setInterval(() => fetchNotifications(false), 15000);
         return () => clearInterval(interval);
     }, [router, fetchNotifications]);
 

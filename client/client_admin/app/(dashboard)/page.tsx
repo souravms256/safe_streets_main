@@ -9,7 +9,6 @@ import {
     XCircle,
     Activity,
     ArrowUpRight,
-    TrendingUp,
     Clock,
     Loader2
 } from "lucide-react";
@@ -109,9 +108,9 @@ export default function DashboardPage() {
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Total Violations - Large Card */}
-                <div className="col-span-1 md:col-span-2 stat-card p-6 group">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Total Violations — Hero */}
+                <div className="col-span-2 stat-card p-6 group bg-gradient-to-br from-white/[0.04] to-transparent">
                     <div className="flex items-start justify-between">
                         <div>
                             <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">Total Violations</p>
@@ -122,74 +121,56 @@ export default function DashboardPage() {
                             <AlertTriangle className="h-6 w-6 text-white" />
                         </div>
                     </div>
-                    <div className="mt-4 pt-4 border-t border-white/5">
-                        <div className="flex items-center gap-2 text-emerald-400 text-sm">
-                            <TrendingUp className="h-4 w-4" />
-                            <span>Processing rate: 98.2%</span>
-                        </div>
-                    </div>
                 </div>
 
                 {/* Pending */}
-                <div className="stat-card p-6 group">
-                    <div className="flex items-start justify-between mb-4">
-                        <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">Pending</p>
+                <div className="stat-card p-5 group">
+                    <div className="flex items-start justify-between mb-3">
                         <div className="p-2 rounded-lg bg-amber-500/10">
                             <Clock className="h-4 w-4 text-amber-500" />
                         </div>
                     </div>
                     <p className="text-3xl font-bold text-white stat-number">{stats.pending_violations}</p>
-                    <p className="text-xs text-amber-500 mt-1">Requires review</p>
+                    <p className="text-xs font-medium text-amber-500 mt-1">Pending Review</p>
                 </div>
 
                 {/* Users */}
-                <div className="stat-card p-6 group">
-                    <div className="flex items-start justify-between mb-4">
-                        <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">Users</p>
+                <div className="stat-card p-5 group">
+                    <div className="flex items-start justify-between mb-3">
                         <div className="p-2 rounded-lg bg-blue-500/10">
                             <Users className="h-4 w-4 text-blue-500" />
                         </div>
                     </div>
                     <p className="text-3xl font-bold text-white stat-number">{stats.total_users}</p>
-                    <p className="text-xs text-gray-500 mt-1">Active accounts</p>
+                    <p className="text-xs font-medium text-gray-500 mt-1">Active Users</p>
                 </div>
 
                 {/* Verified */}
-                <div className="col-span-1 md:col-span-2 stat-card p-6 group">
-                    <div className="flex items-start justify-between mb-4">
-                        <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">Verified</p>
+                <div className="stat-card p-5 group">
+                    <div className="flex items-start justify-between mb-3">
                         <div className="p-2 rounded-lg bg-emerald-500/10">
                             <CheckCircle className="h-4 w-4 text-emerald-500" />
                         </div>
+                        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                            {stats.total_violations > 0 ? Math.round((stats.verified_violations / stats.total_violations) * 100) : 0}%
+                        </span>
                     </div>
                     <p className="text-3xl font-bold text-white stat-number">{stats.verified_violations}</p>
-                    <div className="mt-3">
-                        <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                            <div
-                                className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all duration-500"
-                                style={{ width: `${stats.total_violations ? (stats.verified_violations / stats.total_violations) * 100 : 0}%` }}
-                            />
-                        </div>
-                    </div>
+                    <p className="text-xs font-medium text-emerald-500 mt-1">Verified</p>
                 </div>
 
                 {/* Rejected */}
-                <div className="col-span-1 md:col-span-2 stat-card p-6 group">
-                    <div className="flex items-start justify-between mb-4">
-                        <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">Rejected</p>
+                <div className="stat-card p-5 group">
+                    <div className="flex items-start justify-between mb-3">
                         <div className="p-2 rounded-lg bg-rose-500/10">
                             <XCircle className="h-4 w-4 text-rose-500" />
                         </div>
+                        <span className="text-[10px] font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-full">
+                            {stats.total_violations > 0 ? Math.round((stats.rejected_violations / stats.total_violations) * 100) : 0}%
+                        </span>
                     </div>
                     <p className="text-3xl font-bold text-white stat-number">{stats.rejected_violations}</p>
-                    <div className="mt-3">
-                        <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                            <div
-                                className="h-full bg-gradient-to-r from-rose-500 to-rose-400 rounded-full transition-all duration-500"
-                                style={{ width: `${stats.total_violations ? (stats.rejected_violations / stats.total_violations) * 100 : 0}%` }}
-                            />
-                        </div>
-                    </div>
+                    <p className="text-xs font-medium text-rose-500 mt-1">Rejected</p>
                 </div>
             </div>
 

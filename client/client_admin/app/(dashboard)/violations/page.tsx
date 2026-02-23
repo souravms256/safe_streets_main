@@ -19,7 +19,9 @@ import {
     Filter,
     Image as ImageIcon,
     X,
-    Maximize2
+    Maximize2,
+    MessageSquare,
+    Eye
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import dynamic from 'next/dynamic';
@@ -54,6 +56,8 @@ export default function ViolationsPage() {
     const [filterStatus, setFilterStatus] = useState("All");
     const [currentPage, setCurrentPage] = useState(1);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
+    const [reviewViolation, setReviewViolation] = useState<Violation | null>(null);
+    const [adminComment, setAdminComment] = useState("");
     const rowsPerPage = 10;
 
     const fetchViolations = async () => {
@@ -98,11 +102,15 @@ export default function ViolationsPage() {
         currentPage * rowsPerPage
     );
 
-    const handleStatusUpdate = async (id: string, status: string) => {
+    const handleStatusUpdate = async (id: string, status: string, comment?: string) => {
         try {
-            await api.put(`/admin/violations/${id}/status`, { status });
+            const payload: any = { status };
+            if (comment) payload.admin_comments = comment;
+            await api.put(`/admin/violations/${id}/status`, payload);
             setViolations(violations.map(v => v.id === id ? { ...v, status } : v));
             toast.success(`Violation marked as ${status}`);
+            setReviewViolation(null);
+            setAdminComment("");
         } catch (error) {
             console.error("Failed to update status", error);
             toast.error("Failed to update status");
@@ -129,26 +137,26 @@ export default function ViolationsPage() {
     };
 
     const handleBulkAction = async (action: 'verify' | 'reject' | 'delete') => {
-        const statusMap = { verify: 'Verified', reject: 'Rejected' };
-        let successCount = 0;
+        const ids = Array.from(selectedIds);
+        if (ids.length === 0) return;
 
-        for (const id of Array.from(selectedIds)) {
-            try {
-                if (action === 'delete') {
-                    await api.delete(`/admin/violations/${id}`);
-                    setViolations(prev => prev.filter(v => v.id !== id));
-                } else {
-                    const status = statusMap[action];
-                    await api.put(`/admin/violations/${id}/status`, { status });
-                    setViolations(prev => prev.map(v => v.id === id ? { ...v, status } : v));
-                }
-                successCount++;
-            } catch (error) {
-                console.error(`Failed to process ${id}`, error);
+        try {
+            if (action === 'delete') {
+                if (!confirm(`Delete ${ids.length} violations permanently?`)) return;
+                const res = await api.delete('/admin/violations/bulk', { data: { ids } });
+                setViolations(prev => prev.filter(v => !selectedIds.has(v.id)));
+                toast.success(`Deleted ${res.data.success} violations`);
+            } else {
+                const status = action === 'verify' ? 'Verified' : 'Rejected';
+                const res = await api.put('/admin/violations/bulk-status', { ids, status });
+                setViolations(prev => prev.map(v => selectedIds.has(v.id) ? { ...v, status } : v));
+                toast.success(`${res.data.success} violations ${action === 'verify' ? 'verified' : 'rejected'}`);
             }
+        } catch (error) {
+            console.error(`Bulk ${action} failed`, error);
+            toast.error(`Bulk ${action} failed`);
         }
 
-        toast.success(`Processed ${successCount} violations`);
         setSelectedIds(new Set());
     };
 
@@ -378,6 +386,13 @@ export default function ViolationsPage() {
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button
+                                                            onClick={() => { setReviewViolation(violation); setAdminComment(""); }}
+                                                            className="p-1.5 rounded-lg hover:bg-blue-500/20 text-gray-500 hover:text-blue-400 transition-colors"
+                                                            title="Review"
+                                                        >
+                                                            <Eye className="h-4 w-4" />
+                                                        </button>
                                                         {violation.status !== "Verified" && (
                                                             <button
                                                                 onClick={() => handleStatusUpdate(violation.id, "Verified")}
@@ -474,6 +489,176 @@ export default function ViolationsPage() {
                                     alt="Evidence"
                                     className="max-w-full max-h-[85vh] object-contain"
                                 />
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Review Detail Modal */}
+            <AnimatePresence>
+                {reviewViolation && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+                        onClick={() => { setReviewViolation(null); setAdminComment(""); }}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            transition={{ type: "spring", duration: 0.5 }}
+                            className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-gray-900 rounded-2xl shadow-2xl border border-white/10"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Header */}
+                            <div className="flex items-center justify-between p-6 border-b border-white/10 sticky top-0 bg-gray-900/95 backdrop-blur-sm z-10">
+                                <div>
+                                    <h3 className="text-lg font-semibold text-white">Review Violation</h3>
+                                    <p className="text-sm text-gray-500 mt-0.5 font-mono">{reviewViolation.id.substring(0, 12)}...</p>
+                                </div>
+                                <button
+                                    onClick={() => { setReviewViolation(null); setAdminComment(""); }}
+                                    className="p-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                                >
+                                    <X className="h-5 w-5" />
+                                </button>
+                            </div>
+
+                            <div className="p-6 space-y-6">
+                                {/* Evidence Image */}
+                                <div className="rounded-xl overflow-hidden border border-white/10 bg-black">
+                                    {reviewViolation.image_url ? (
+                                        <img
+                                            src={reviewViolation.image_url}
+                                            alt="Evidence"
+                                            className="w-full h-auto max-h-80 object-contain"
+                                        />
+                                    ) : (
+                                        <div className="h-48 flex items-center justify-center text-gray-600">
+                                            <ImageIcon className="h-12 w-12" />
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Status & AI Detection */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="p-4 bg-white/5 rounded-xl border border-white/5">
+                                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">AI Detection</p>
+                                        <p className="mt-1 text-lg font-semibold text-white">{reviewViolation.violation_type}</p>
+                                    </div>
+                                    <div className="p-4 bg-white/5 rounded-xl border border-white/5">
+                                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Current Status</p>
+                                        <span className={cn(
+                                            "mt-1 inline-block px-2.5 py-1 rounded-full text-xs font-medium border",
+                                            reviewViolation.status === 'Verified' && "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+                                            reviewViolation.status === 'Rejected' && "bg-rose-500/10 text-rose-400 border-rose-500/20",
+                                            reviewViolation.status === 'Under Review' && "bg-amber-500/10 text-amber-400 border-amber-500/20",
+                                        )}>
+                                            {reviewViolation.status}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Reporter Info */}
+                                <div className="space-y-3">
+                                    <h4 className="text-sm font-semibold text-white flex items-center gap-2">
+                                        <MapPin className="h-4 w-4 text-blue-400" />
+                                        Report Info
+                                    </h4>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="p-3 bg-white/5 rounded-lg border border-white/5">
+                                            <p className="text-xs text-gray-500">Reporter</p>
+                                            <p className="text-sm text-gray-200 font-medium mt-0.5">{reviewViolation.profiles?.full_name || "Anonymous"}</p>
+                                        </div>
+                                        <div className="p-3 bg-white/5 rounded-lg border border-white/5">
+                                            <p className="text-xs text-gray-500">Location</p>
+                                            <p className="text-sm text-gray-200 mt-0.5">{reviewViolation.details?.short_address || reviewViolation.location}</p>
+                                        </div>
+                                        <div className="p-3 bg-white/5 rounded-lg border border-white/5">
+                                            <p className="text-xs text-gray-500">Date</p>
+                                            <p className="text-sm text-gray-200 mt-0.5">{new Date(reviewViolation.created_at).toLocaleString()}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* User-Provided Details */}
+                                {(reviewViolation.details?.user_violation_type || reviewViolation.details?.description || reviewViolation.details?.severity || reviewViolation.details?.vehicle_number) && (
+                                    <div className="space-y-3">
+                                        <h4 className="text-sm font-semibold text-white flex items-center gap-2">
+                                            <MessageSquare className="h-4 w-4 text-purple-400" />
+                                            Reporter&apos;s Details
+                                        </h4>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {reviewViolation.details?.user_violation_type && (
+                                                <div className="p-3 bg-purple-500/5 rounded-lg border border-purple-500/10">
+                                                    <p className="text-xs text-gray-500">Reported Type</p>
+                                                    <p className="text-sm text-purple-300 font-medium mt-0.5">{reviewViolation.details.user_violation_type}</p>
+                                                </div>
+                                            )}
+                                            {reviewViolation.details?.severity && (
+                                                <div className="p-3 bg-purple-500/5 rounded-lg border border-purple-500/10">
+                                                    <p className="text-xs text-gray-500">Severity</p>
+                                                    <p className={`text-sm font-medium mt-0.5 ${
+                                                        reviewViolation.details.severity === 'High' ? 'text-red-400' :
+                                                        reviewViolation.details.severity === 'Medium' ? 'text-yellow-400' : 'text-green-400'
+                                                    }`}>{reviewViolation.details.severity}</p>
+                                                </div>
+                                            )}
+                                            {reviewViolation.details?.vehicle_number && (
+                                                <div className="p-3 bg-purple-500/5 rounded-lg border border-purple-500/10">
+                                                    <p className="text-xs text-gray-500">Vehicle Number</p>
+                                                    <p className="text-sm text-white font-bold tracking-wider mt-0.5">{reviewViolation.details.vehicle_number}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                        {reviewViolation.details?.description && (
+                                            <div className="p-3 bg-purple-500/5 rounded-lg border border-purple-500/10">
+                                                <p className="text-xs text-gray-500 mb-1">Description</p>
+                                                <p className="text-sm text-gray-300 leading-relaxed">{reviewViolation.details.description}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Admin Comment Input */}
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-white flex items-center gap-2">
+                                        <MessageSquare className="h-4 w-4 text-blue-400" />
+                                        Your Comment
+                                    </label>
+                                    <textarea
+                                        value={adminComment}
+                                        onChange={(e) => setAdminComment(e.target.value)}
+                                        placeholder="Add feedback for the reporter (optional)..."
+                                        rows={3}
+                                        className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 transition-all resize-none"
+                                    />
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="flex gap-3 pt-2">
+                                    {reviewViolation.status !== "Verified" && (
+                                        <button
+                                            onClick={() => handleStatusUpdate(reviewViolation.id, "Verified", adminComment || undefined)}
+                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/20 font-medium text-sm transition-all"
+                                        >
+                                            <CheckCircle className="h-4 w-4" />
+                                            Verify Report
+                                        </button>
+                                    )}
+                                    {reviewViolation.status !== "Rejected" && (
+                                        <button
+                                            onClick={() => handleStatusUpdate(reviewViolation.id, "Rejected", adminComment || undefined)}
+                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-rose-500/20 text-rose-400 hover:bg-rose-500/30 border border-rose-500/20 font-medium text-sm transition-all"
+                                        >
+                                            <XCircle className="h-4 w-4" />
+                                            Reject Report
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         </motion.div>
                     </motion.div>

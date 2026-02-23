@@ -16,7 +16,9 @@ import {
     Clock,
     Plus,
     LayoutDashboard,
-    AlertCircle
+    AlertCircle,
+    XCircle,
+    Trophy
 } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
 
@@ -45,6 +47,27 @@ const item = {
     hidden: { y: 20, opacity: 0 },
     show: { y: 0, opacity: 1 }
 };
+
+function getReportsOverTime(violations: Violation[]) {
+    const days: { label: string; date: string; count: number }[] = [];
+    const today = new Date();
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split("T")[0];
+        days.push({
+            label: d.toLocaleDateString(undefined, { weekday: "short" }),
+            date: dateStr,
+            count: 0,
+        });
+    }
+    for (const v of violations) {
+        const vDate = v.created_at.split("T")[0];
+        const day = days.find((d) => d.date === vDate);
+        if (day) day.count++;
+    }
+    return days;
+}
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -101,8 +124,17 @@ export default function DashboardPage() {
             value: violations.filter(v => v.status === 'Under Review').length,
             icon: Clock,
             color: "yellow"
+        },
+        {
+            label: "Rejected",
+            value: violations.filter(v => v.status === 'Rejected').length,
+            icon: XCircle,
+            color: "red"
         }
     ];
+
+    const chartData = getReportsOverTime(violations);
+    const maxCount = Math.max(...chartData.map((d) => d.count), 1);
 
     return (
         <PullToRefresh onRefresh={handleRefresh}>
@@ -119,6 +151,12 @@ export default function DashboardPage() {
                                 <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
                                     Dashboard
                                 </h1>
+                                {user?.points != null && user.points > 0 && (
+                                    <span className="ml-2 flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800">
+                                        <Trophy className="w-3.5 h-3.5" />
+                                        {user.points} pts
+                                    </span>
+                                )}
                             </div>
                             <p className="text-sm text-slate-600 dark:text-slate-400">
                                 Welcome back, <span className="font-semibold text-slate-900 dark:text-slate-100">{user?.full_name || "User"}</span>
@@ -136,14 +174,14 @@ export default function DashboardPage() {
                         variants={container}
                         initial="hidden"
                         animate="show"
-                        className="grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-3"
+                        className="grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-4"
                     >
                         {stats.map((stat, index) => (
                             <motion.div
                                 key={index}
                                 variants={item}
                                 whileHover={{ y: -5 }}
-                                className={`group relative overflow-hidden rounded-2xl bg-white p-4 sm:p-6 shadow-sm dark:bg-slate-900 border border-slate-100 dark:border-slate-800 transition-all hover:shadow-xl dark:hover:border-slate-700 ${index === 0 ? 'col-span-2 md:col-span-1' : ''}`}
+                                className="group relative overflow-hidden rounded-2xl bg-white p-4 sm:p-6 shadow-sm dark:bg-slate-900 border border-slate-100 dark:border-slate-800 transition-all hover:shadow-xl dark:hover:border-slate-700"
                             >
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">
@@ -153,6 +191,7 @@ export default function DashboardPage() {
                                     ${stat.color === 'blue' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 group-hover:bg-blue-100' : ''}
                                     ${stat.color === 'green' ? 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400 group-hover:bg-green-100' : ''}
                                     ${stat.color === 'yellow' ? 'bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400 group-hover:bg-yellow-100' : ''}
+                                    ${stat.color === 'red' ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 group-hover:bg-red-100' : ''}
                                 `}>
                                         <stat.icon className="w-5 h-5" />
                                     </span>
@@ -164,10 +203,47 @@ export default function DashboardPage() {
                                 ${stat.color === 'blue' ? 'bg-blue-500' : ''}
                                 ${stat.color === 'green' ? 'bg-green-500' : ''}
                                 ${stat.color === 'yellow' ? 'bg-yellow-500' : ''}
+                                ${stat.color === 'red' ? 'bg-red-500' : ''}
                             `} />
                             </motion.div>
                         ))}
                     </motion.div>
+
+                    {/* Reports This Week Chart */}
+                    {violations.length > 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.3 }}
+                            className="mt-6 rounded-2xl bg-white p-5 sm:p-6 shadow-sm dark:bg-slate-900 border border-slate-100 dark:border-slate-800"
+                        >
+                            <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">
+                                Reports This Week
+                            </h3>
+                            <div className="flex items-end justify-between gap-2 h-28">
+                                {chartData.map((day, i) => (
+                                    <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
+                                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 tabular-nums">
+                                            {day.count > 0 ? day.count : ""}
+                                        </span>
+                                        <motion.div
+                                            initial={{ height: 0 }}
+                                            animate={{ height: day.count > 0 ? `${(day.count / maxCount) * 80}px` : "4px" }}
+                                            transition={{ delay: 0.5 + i * 0.05, type: "spring", stiffness: 200 }}
+                                            className={`w-full max-w-[40px] rounded-lg transition-colors ${
+                                                day.count > 0
+                                                    ? "bg-gradient-to-t from-blue-600 to-blue-400 dark:from-blue-500 dark:to-blue-300"
+                                                    : "bg-slate-100 dark:bg-slate-800"
+                                            }`}
+                                        />
+                                        <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500">
+                                            {day.label}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </motion.div>
+                    )}
 
                     {violations.length === 0 ? (
                         <motion.div

@@ -55,6 +55,7 @@ const Navbar = () => {
     const dashboardLinks = [
         { name: "Dashboard", href: "/dashboard" },
         { name: "Map View", href: "/map" },
+        { name: "Leaderboard", href: "/leaderboard" },
     ];
 
     const activeLinks = user ? dashboardLinks : publicLinks;

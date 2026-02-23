@@ -3,6 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from core.config import settings
 from utils.logging import setup_logging, get_correlation_id, set_correlation_id, api_logger
+from core.limiter import limiter
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 import uuid
 import time
 
@@ -23,6 +26,9 @@ app = FastAPI(
     description="Secure FastAPI backend using Supabase Auth",
     version="1.0.0"
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Correlation ID and logging middleware
 @app.middleware("http")
@@ -58,13 +64,18 @@ async def global_exception_handler(request: Request, exc: Exception):
     error_traceback = traceback.format_exc()
     api_logger.error(f"Unhandled exception: {str(exc)}\n{error_traceback}")
     
+    content = {
+        "detail": "Internal Server Error",
+        "correlation_id": correlation_id
+    }
+    
+    if getattr(settings, "DEBUG", False):
+        content["detail"] = str(exc)
+        content["traceback"] = error_traceback
+        
     return JSONResponse(
         status_code=500,
-        content={
-            "detail": str(exc),
-            "traceback": error_traceback, # Include full traceback for the user to see
-            "correlation_id": correlation_id
-        },
+        content=content,
         headers={
             "X-Correlation-ID": correlation_id,
             "Access-Control-Allow-Origin": "*"

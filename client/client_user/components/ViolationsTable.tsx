@@ -27,6 +27,16 @@ interface ViolationDetails {
         postcode?: string;
         country?: string;
     };
+    // User-provided fields
+    user_violation_type?: string;
+    description?: string;
+    severity?: string;
+    vehicle_number?: string;
+    // Admin feedback
+    admin_comments?: string;
+    admin_reviewed_at?: string;
+    // Multi-image support
+    additional_images?: string[];
 }
 
 interface Violation {
@@ -457,6 +467,84 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                                     <strong>Location:</strong> {selectedViolation.details?.short_address || selectedViolation.details?.address || selectedViolation.address || selectedViolation.location}
                                 </div>
                             </div>
+
+                            {/* Reporter Details */}
+                            {selectedViolation.details && (selectedViolation.details.user_violation_type || selectedViolation.details.description || selectedViolation.details.severity || selectedViolation.details.vehicle_number) && (
+                                <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-slate-700">
+                                    <h4 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                                        <svg className="h-4 w-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                        </svg>
+                                        Reporter Details
+                                    </h4>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {selectedViolation.details.user_violation_type && (
+                                            <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                                                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Reported Type</p>
+                                                <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+                                                    {selectedViolation.details.user_violation_type}
+                                                </p>
+                                            </div>
+                                        )}
+                                        {selectedViolation.details.severity && (
+                                            <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                                                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Severity</p>
+                                                <p className={`mt-1 text-sm font-semibold ${
+                                                    selectedViolation.details.severity === 'High' ? 'text-red-600 dark:text-red-400' :
+                                                    selectedViolation.details.severity === 'Medium' ? 'text-yellow-600 dark:text-yellow-400' :
+                                                    'text-green-600 dark:text-green-400'
+                                                }`}>
+                                                    {selectedViolation.details.severity}
+                                                </p>
+                                            </div>
+                                        )}
+                                        {selectedViolation.details.vehicle_number && (
+                                            <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                                                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Vehicle Number</p>
+                                                <p className="mt-1 text-sm font-bold text-slate-900 dark:text-white tracking-wider">
+                                                    {selectedViolation.details.vehicle_number}
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                    {selectedViolation.details.description && (
+                                        <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                                            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Description</p>
+                                            <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                                                {selectedViolation.details.description}
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Admin Feedback */}
+                            {selectedViolation.details?.admin_comments && (
+                                <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
+                                    <h4 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2 mb-3">
+                                        <svg className="h-4 w-4 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                                        </svg>
+                                        Admin Feedback
+                                    </h4>
+                                    <div className={`p-4 rounded-xl border-l-4 ${
+                                        selectedViolation.status === 'Verified'
+                                            ? 'bg-green-50 border-green-500 dark:bg-green-900/20 dark:border-green-500'
+                                            : selectedViolation.status === 'Rejected'
+                                            ? 'bg-red-50 border-red-500 dark:bg-red-900/20 dark:border-red-500'
+                                            : 'bg-blue-50 border-blue-500 dark:bg-blue-900/20 dark:border-blue-500'
+                                    }`}>
+                                        <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                                            {selectedViolation.details.admin_comments}
+                                        </p>
+                                        {selectedViolation.details.admin_reviewed_at && (
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                                                Reviewed on {new Date(selectedViolation.details.admin_reviewed_at).toLocaleString()}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

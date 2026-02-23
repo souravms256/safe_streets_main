@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, EmailStr
 from core.security import hash_password, verify_password, create_access_token
 from utils.supabase_client import supabase
-from datetime import datetime
+from datetime import datetime, timezone
 
 router = APIRouter(prefix="/admin/auth", tags=["Admin Auth"])
 
@@ -29,7 +29,7 @@ def admin_signup(payload: AdminSignupRequest):
         "full_name": payload.full_name,
         "email": payload.email,
         "password_hash": hashed,
-        "created_at": datetime.utcnow().isoformat()
+        "created_at": datetime.now(timezone.utc).isoformat()
     }).execute()
 
     return {"message": "Admin created successfully"}
