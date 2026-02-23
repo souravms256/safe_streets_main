@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import api from "@/services/api";
 import { Button } from "@/components/ui/Button";
 import toast from "react-hot-toast";
-import { compressImage, needsCompression, blobToFile, getFileSizeMB } from "@/services/imageCompression";
+import { compressImage, needsCompression, blobToFile } from "@/services/imageCompression";
 
 interface AddressData {
     display_name: string;
