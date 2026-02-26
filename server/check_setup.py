@@ -1,5 +1,4 @@
 from utils.supabase_client import supabase
-import sys
 
 def check_setup():
     print("Checking Supabase Connection...")

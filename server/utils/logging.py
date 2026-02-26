@@ -5,7 +5,6 @@ import logging
 import sys
 import uuid
 from contextvars import ContextVar
-from datetime import datetime
 from typing import Optional
 
 # Context variable for correlation ID

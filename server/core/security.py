@@ -7,23 +7,28 @@ from fastapi import HTTPException, Header
 
 ph = PasswordHasher()
 
+
 # ===========================
 # PASSWORD
 # ===========================
 def hash_password(password: str) -> str:
     return ph.hash(password)
 
+
 def verify_password(plain: str, hashed: str) -> bool:
     try:
         return ph.verify(hashed, plain)
-    except:
+    except Exception:
         return False
+
 
 # ===========================
 # TOKENS
 # ===========================
 def create_access_token(payload: dict):
-    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = datetime.now(timezone.utc) + timedelta(
+        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+    )
     payload.update({"exp": expire})
 
     # Ensure algorithm is supported
@@ -33,12 +38,17 @@ def create_access_token(payload: dict):
 
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=algo)
 
+
 # from datetime import datetime, timedelta, timezone
 
+
 def create_refresh_token():
-    expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    expire = datetime.now(timezone.utc) + timedelta(
+        days=settings.REFRESH_TOKEN_EXPIRE_DAYS
+    )
     token = os.urandom(32).hex()
     return token, expire
+
 
 # ===========================
 # DECODE + TOKEN VALIDATION
@@ -50,12 +60,14 @@ def decode_access_token(token: str):
     except JWTError:
         return None
 
+
 # ===========================
 # ROLE CHECK
 # ===========================
 def require_admin(role: str):
     if role != "admin":
         raise HTTPException(status_code=403, detail="Admin only")
+
 
 # ===========================
 # TOKEN HEADER DEPENDENCY
