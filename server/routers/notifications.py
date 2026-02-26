@@ -1,8 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from core.dependencies import get_current_user
 from utils.supabase_client import supabase
-from pydantic import BaseModel
-from datetime import datetime
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
 

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import api from "@/services/api";
-import { Badge } from "@/components/ui/badge";
+
 import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
 import {
@@ -10,13 +10,11 @@ import {
     XCircle,
     Trash2,
     MapPin,
-    Clock,
+
     LayoutList,
     Map as MapIcon,
     Search,
-    Download,
-    RefreshCw,
-    Filter,
+
     Image as ImageIcon,
     X,
     Maximize2,
@@ -39,6 +37,7 @@ interface Violation {
     status: string;
     location: string;
     created_at: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     details: any;
     profiles?: {
         full_name: string;
@@ -49,6 +48,7 @@ interface Violation {
 export default function ViolationsPage() {
     const [violations, setViolations] = useState<Violation[]>([]);
     const [loading, setLoading] = useState(true);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [error, setError] = useState<string | null>(null);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [viewMode, setViewMode] = useState<'list' | 'map' | 'heatmap'>('list');
@@ -67,6 +67,7 @@ export default function ViolationsPage() {
             const res = await api.get("/admin/violations");
             const violationsData = res.data.data || res.data;
             setViolations(Array.isArray(violationsData) ? violationsData : []);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             console.error("Failed to fetch violations", error);
             const errorMsg = error.response?.data?.detail || "Failed to load violations";
@@ -104,6 +105,7 @@ export default function ViolationsPage() {
 
     const handleStatusUpdate = async (id: string, status: string, comment?: string) => {
         try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const payload: any = { status };
             if (comment) payload.admin_comments = comment;
             await api.put(`/admin/violations/${id}/status`, payload);

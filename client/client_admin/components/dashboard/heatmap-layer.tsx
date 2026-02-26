@@ -15,15 +15,14 @@ export function HeatmapLayer({ points }: HeatmapLayerProps) {
     useEffect(() => {
         if (!points || points.length === 0) return;
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let heatLayer: any = null;
 
         (async () => {
             try {
                 // Ensure L is available globally for leaflet.heat
                 if (typeof window !== 'undefined') {
-                    // @ts-ignore
                     if (!window.L) {
-                        // @ts-ignore
                         window.L = L;
                     }
                 }
@@ -31,9 +30,7 @@ export function HeatmapLayer({ points }: HeatmapLayerProps) {
                 // Dynamically import leaflet.heat
                 await import('leaflet.heat');
 
-                // @ts-ignore
                 if (L.heatLayer) {
-                    // @ts-ignore
                     heatLayer = L.heatLayer(points, {
                         radius: 25,
                         blur: 15,
