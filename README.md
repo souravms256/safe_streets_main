@@ -1,4 +1,13 @@
-# SafeStreets
+# SafeStreets 🚦
+
+![Next.js](https://img.shields.io/badge/Next.js-15.1-black?logo=next.js&logoColor=white)
+![React](https://img.shields.io/badge/React-19-blue?logo=react&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-38B2AC?logo=tailwind-css&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-DB_%26_Auth-3ECF8E?logo=supabase&logoColor=white)
+![Ruff](https://img.shields.io/badge/Linter-Ruff-red)
+![ESLint](https://img.shields.io/badge/Linter-ESLint-4B32C3?logo=eslint&logoColor=white)
 
 AI-powered traffic violation detection and reporting system. Citizens can photograph violations (helmetless driving, no parking, triple riding), and the system uses AI to automatically classify them.
 
