@@ -26,6 +26,7 @@ export default function LoginPage() {
             const { access_token } = response.data;
             localStorage.setItem("admin_access_token", access_token);
             router.push("/");
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
             const msg = err.response?.data?.detail || "Login failed.";
             if (Array.isArray(msg)) {

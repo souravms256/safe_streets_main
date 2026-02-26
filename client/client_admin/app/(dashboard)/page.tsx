@@ -28,6 +28,7 @@ interface DashboardStats {
 interface DashboardData {
     message: string;
     stats: DashboardStats;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recent_activity: any[];
     reports_over_time: { date: string; count: number }[];
     reports_by_type: { name: string; value: number }[];
@@ -197,6 +198,7 @@ export default function DashboardPage() {
                                 <p className="text-gray-500">No recent activity</p>
                             </div>
                         ) : (
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
                             data?.recent_activity?.map((violation: any, index: number) => (
                                 <div
                                     key={violation.id}

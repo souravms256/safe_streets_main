@@ -3,18 +3,21 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/services/api";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, CheckCircle, XCircle, FileText, Ban, Lock, ExternalLink } from "lucide-react";
+import { ArrowLeft, CheckCircle, FileText, Ban, ExternalLink } from "lucide-react";
 import Link from 'next/link';
 import { cn } from "@/lib/utils";
 
 export default function UserDetailPage() {
     const params = useParams();
     const router = useRouter();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [user, setUser] = useState<any>(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [stats, setStats] = useState<any>(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [violations, setViolations] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -60,15 +63,7 @@ export default function UserDetailPage() {
     if (loading) return <div className="p-8">Loading...</div>;
     if (error || !user) return <div className="p-8 text-red-500">{error || "User not found"}</div>;
 
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-        });
-    };
+
 
     const handleDeleteUser = async () => {
         if (!confirm("Are you sure you want to delete this user? This action cannot be undone.")) return;

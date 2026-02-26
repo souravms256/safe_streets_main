@@ -28,6 +28,7 @@ export default function RegisterPage() {
         try {
             await api.post("/admin/auth/signup", { full_name, email, password });
             router.push("/login?registered=true");
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
             const msg = err.response?.data?.detail || "Registration failed.";
             if (Array.isArray(msg)) {

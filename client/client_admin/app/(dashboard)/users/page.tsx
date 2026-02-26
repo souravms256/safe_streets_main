@@ -2,12 +2,13 @@
 
 import React, { useEffect, useState } from "react";
 import api from "@/services/api";
-import { Badge } from "@/components/ui/badge";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export default function UsersPage() {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -56,7 +57,9 @@ export default function UsersPage() {
     const sortedUsers = [...filteredUsers].sort((a, b) => {
         if (!sortConfig) return 0;
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let aValue: any = a;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let bValue: any = b;
 
         if (sortConfig.key === 'created_at') {

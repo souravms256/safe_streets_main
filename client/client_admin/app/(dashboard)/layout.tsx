@@ -11,9 +11,6 @@ import {
     Users,
     LogOut,
     ShieldCheck,
-    TrendingUp,
-    Activity,
-    Settings,
     ChevronRight
 } from "lucide-react";
 
