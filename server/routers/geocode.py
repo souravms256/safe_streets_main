@@ -11,7 +11,7 @@ def reverse_geocode(
 ):
     """
     Reverse geocode coordinates to a human-readable address.
-    Uses Nominatim (OpenStreetMap) — free, no API key needed.
+    Uses LocationIQ (OpenStreetMap data) — provides detailed street-level addresses.
     Results are cached server-side to respect rate limits.
 
     Returns structured address data including:

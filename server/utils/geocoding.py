@@ -1,16 +1,23 @@
+import os
 import requests
 import time
 import threading
 
+# ─── LocationIQ Configuration ─────────────────────────────────────
+# Uses OpenStreetMap data — provides the same detailed addresses as Nominatim.
+# Works reliably from cloud servers (Render, etc.) unlike Nominatim.
+LOCATIONIQ_API_KEY = os.getenv("LOCATIONIQ_API_KEY", "")
+LOCATIONIQ_BASE_URL = "https://us1.locationiq.com/v1/reverse"
+
 # ─── In-Memory Cache ───────────────────────────────────────────────
-# Caches reverse geocoding results to avoid redundant Nominatim calls.
-# Key: rounded (lat, lon) tuple, Value: {"address": str, "structured": dict, "timestamp": float}
+# Caches reverse geocoding results to avoid redundant API calls.
+# Key: rounded (lat, lon) tuple, Value: {"data": dict, "timestamp": float}
 _geocode_cache: dict = {}
 _cache_lock = threading.Lock()
 CACHE_TTL_SECONDS = 86400  # 24 hours
 CACHE_MAX_SIZE = 500
 
-# Rate limiting: Nominatim requires max 1 request/second
+# Rate limiting: LocationIQ free tier allows 2 requests/second
 _last_request_time = 0.0
 _rate_lock = threading.Lock()
 
@@ -21,13 +28,13 @@ def _round_coords(lat: float, lon: float, precision: int = 5) -> tuple:
 
 
 def _rate_limit():
-    """Enforce 1 request/second for Nominatim's usage policy."""
+    """Enforce rate limit for LocationIQ's free tier (2 req/sec)."""
     global _last_request_time
     with _rate_lock:
         now = time.time()
         elapsed = now - _last_request_time
-        if elapsed < 1.0:
-            time.sleep(1.0 - elapsed)
+        if elapsed < 0.5:
+            time.sleep(0.5 - elapsed)
         _last_request_time = time.time()
 
 
@@ -46,7 +53,7 @@ def _clean_cache():
 
 def get_address(lat: float, lon: float) -> str:
     """
-    Reverse geocodes latitude and longitude using Nominatim (OpenStreetMap).
+    Reverse geocodes latitude and longitude.
     Returns a human-readable display_name string.
     Uses in-memory caching and rate limiting.
     """
@@ -56,7 +63,7 @@ def get_address(lat: float, lon: float) -> str:
 
 def get_address_detailed(lat: float, lon: float) -> dict:
     """
-    Reverse geocodes latitude and longitude using Nominatim (OpenStreetMap).
+    Reverse geocodes latitude and longitude using LocationIQ (OpenStreetMap data).
     Returns structured address data:
     {
         "display_name": "Full human-readable address",
@@ -64,6 +71,7 @@ def get_address_detailed(lat: float, lon: float) -> dict:
         "neighbourhood": "...",
         "suburb": "...",
         "city": "...",
+        "state_district": "...",
         "state": "...",
         "postcode": "...",
         "country": "...",
@@ -83,11 +91,17 @@ def get_address_detailed(lat: float, lon: float) -> dict:
             else:
                 _geocode_cache.pop(cache_key, None)
 
-    # Not in cache — call Nominatim
-    url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lon}&zoom=18&addressdetails=1"
-    headers = {
-        "User-Agent": "SafeStreetsAI-ResearchProject/3.0 (Contact: samarthuday@users.noreply.github.com; Developer: samarthuday)",
-        "Referer": "https://safestreets-violation-system.com"
+    if not LOCATIONIQ_API_KEY:
+        raise RuntimeError("LOCATIONIQ_API_KEY environment variable is not set")
+
+    # Not in cache — call LocationIQ reverse geocoding API
+    params = {
+        "key": LOCATIONIQ_API_KEY,
+        "lat": lat,
+        "lon": lon,
+        "format": "json",
+        "addressdetails": 1,
+        "zoom": 18,
     }
 
     # Retry once if the first attempt fails
@@ -97,7 +111,7 @@ def get_address_detailed(lat: float, lon: float) -> dict:
     for attempt in range(max_retries):
         try:
             _rate_limit()
-            response = requests.get(url, headers=headers, timeout=10)
+            response = requests.get(LOCATIONIQ_BASE_URL, params=params, timeout=10)
 
             if response.status_code == 200:
                 data = response.json()
@@ -128,8 +142,13 @@ def get_address_detailed(lat: float, lon: float) -> dict:
                     }
 
                 return result
+            elif response.status_code == 429:
+                last_error = "Rate limit exceeded — waiting before retry"
+                print(f"Geocoding attempt {attempt + 1}: rate limited, backing off")
+                time.sleep(2.0)
+                continue
             else:
-                last_error = f"Nominatim returned status {response.status_code}: {response.text}"
+                last_error = f"LocationIQ returned status {response.status_code}: {response.text}"
                 print(f"Geocoding attempt {attempt + 1} failed: {last_error}")
 
         except Exception as e:
