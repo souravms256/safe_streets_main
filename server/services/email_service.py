@@ -12,6 +12,22 @@ except ImportError:
     aiosmtplib = None
 
 
+def _is_connect_timeout_error(error: Exception) -> bool:
+    if aiosmtplib is None:
+        return False
+
+    timeout_error_types = tuple(
+        err_type
+        for err_type in (
+            getattr(aiosmtplib.errors, "SMTPConnectTimeoutError", None),
+            getattr(aiosmtplib.errors, "SMTPTimeoutError", None),
+            TimeoutError,
+        )
+        if err_type is not None
+    )
+    return isinstance(error, timeout_error_types)
+
+
 async def send_violation_alert_email(
     violation_type: str,
     address: str,
@@ -155,16 +171,63 @@ async def send_violation_alert_email(
                 "[EMAIL] No TLS configured on port 465; consider adjusting SMTP_TLS_MODE.",
             )
 
-    try:
+    async def _send_email(
+        port: int,
+        *,
+        start_tls_value: bool,
+        use_tls_value: bool,
+    ) -> None:
         await aiosmtplib.send(
             msg,
             hostname=settings.SMTP_HOST,
-            port=settings.SMTP_PORT,
-            start_tls=start_tls,
-            use_tls=use_tls,
+            port=port,
+            start_tls=start_tls_value,
+            use_tls=use_tls_value,
             username=settings.SMTP_USER,
             password=settings.SMTP_PASSWORD,
+            timeout=settings.SMTP_TIMEOUT_SECONDS,
+        )
+
+    try:
+        await _send_email(
+            settings.SMTP_PORT,
+            start_tls_value=start_tls,
+            use_tls_value=use_tls,
         )
         logger.info("[EMAIL] Alert sent to %s for violation %s", recipient, violation_id)
     except Exception as e:
-        logger.error("[EMAIL] Failed to send alert: %s", e)
+        is_gmail_465 = (
+            (settings.SMTP_HOST or "").strip().lower() == "smtp.gmail.com"
+            and int(settings.SMTP_PORT) == 465
+        )
+
+        if is_gmail_465 and _is_connect_timeout_error(e):
+            logger.warning(
+                "[EMAIL] Timed out connecting to Gmail on port 465. Retrying on port 587 with STARTTLS. "
+                "This usually means outbound port 465 is blocked by the VM provider, firewall, or network policy."
+            )
+            try:
+                await _send_email(
+                    587,
+                    start_tls_value=True,
+                    use_tls_value=False,
+                )
+                logger.info(
+                    "[EMAIL] Alert sent to %s for violation %s using Gmail STARTTLS fallback on port 587",
+                    recipient,
+                    violation_id,
+                )
+                return
+            except Exception as retry_error:
+                logger.error(
+                    "[EMAIL] Gmail fallback on port 587 also failed: %s. "
+                    "Check SMTP credentials, App Password, and outbound SMTP rules on the VM.",
+                    retry_error,
+                )
+                return
+
+        logger.error(
+            "[EMAIL] Failed to send alert: %s. Check SMTP_HOST/SMTP_PORT/SMTP_TLS_MODE, "
+            "App Password configuration, and whether the VM allows outbound SMTP traffic.",
+            e,
+        )
