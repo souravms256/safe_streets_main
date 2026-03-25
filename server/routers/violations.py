@@ -197,6 +197,13 @@ async def report_violation(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Database insert failed: {str(e)}")
 
+    # Ensure the insert returned at least one row before accessing it
+    if not getattr(result, "data", None):
+        raise HTTPException(
+            status_code=500,
+            detail="Database insert did not return any data for the created violation.",
+        )
+
     # 7. Send email alert in the background (non-blocking)
     saved = result.data[0]
     asyncio.create_task(
