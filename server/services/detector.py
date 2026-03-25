@@ -40,7 +40,7 @@ class ViolationDetector:
                         violations.append("Helmet Violation")
 
                     # Check for Potholes
-                    pothole_count = violations_data.get("potholes_detected", 0)
+                    pothole_count = data.get("road_condition", {}).get("pothole_count", 0)
                     if pothole_count > 0:
                         violations.append("Pothole")
 
@@ -53,13 +53,21 @@ class ViolationDetector:
                     data["helmet_violations"] = violations_data.get("helmet_violations", 0)
                     data["triple_riding"] = violations_data.get("triple_riding", False)
                     data["potholes_detected"] = pothole_count
-                    data["rider_count"] = violations_data.get("rider_count", 0)
+                    data["rider_count"] = data.get("detections", {}).get("riders_on_bikes", 0)
                     
                     # Combine all bounding box detections for the frontend
-                    all_detections = data.get("detections", []) # These are helmets from VM
-                    potholes_raw = data.get("road_condition", {}).get("potholes", [])
+                    detections_dict = data.get("detections", {})
+                    all_detections = []
                     
-                    # Add class label to potholes if missing and add to main detections list
+                    # Add helmets
+                    all_detections.extend(detections_dict.get("helmet_detections", []))
+                    
+                    # Add motorcycles
+                    for m in detections_dict.get("motorcycles", []):
+                        m["class"] = m.get("class", m.get("class_raw", "motorcycle"))
+                        all_detections.append(m)
+
+                    potholes_raw = data.get("road_condition", {}).get("potholes", [])
                     for p in potholes_raw:
                         p["class"] = "pothole"
                         all_detections.append(p)
