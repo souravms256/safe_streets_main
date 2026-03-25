@@ -1,6 +1,10 @@
+import html as html_lib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from core.config import settings
+from utils.logging import get_logger
+
+logger = get_logger("email_service")
 
 try:
     import aiosmtplib
@@ -22,16 +26,28 @@ async def send_violation_alert_email(
     Runs as a background task — failures are logged but never crash the API.
     """
     if aiosmtplib is None:
-        print("[EMAIL] aiosmtplib not installed — skipping email notification")
+        logger.warning("[EMAIL] aiosmtplib not installed — skipping email notification")
         return
 
     if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
-        print("[EMAIL] SMTP credentials not configured — skipping email notification")
+        logger.warning("[EMAIL] SMTP credentials not configured — skipping email notification")
         return
 
-    recipient = settings.ALERT_RECIPIENT_EMAIL
+    recipient = (getattr(settings, "ALERT_RECIPIENT_EMAIL", "") or "").strip()
+    if not recipient or "@" not in recipient:
+        logger.warning("[EMAIL] Alert recipient email not configured or invalid — skipping email notification")
+        return
 
     subject = f"🚨 New Violation Report: {violation_type}"
+
+    # Escape all dynamic values to prevent HTML injection
+    esc_violation_type = html_lib.escape(str(violation_type))
+    esc_short_address = html_lib.escape(str(short_address))
+    esc_address = html_lib.escape(str(address))
+    esc_location = html_lib.escape(str(location))
+    esc_timestamp = html_lib.escape(str(timestamp))
+    esc_violation_id = html_lib.escape(str(violation_id))
+    esc_image_url = html_lib.escape(str(image_url))
 
     html_body = f"""\
     <html>
@@ -45,32 +61,32 @@ async def send_violation_alert_email(
           <table style="width: 100%; border-collapse: collapse;">
             <tr>
               <td style="padding: 10px 0; color: #666; font-weight: 600; width: 140px;">Violation Type</td>
-              <td style="padding: 10px 0; color: #222; font-weight: 700; font-size: 16px;">{violation_type}</td>
+              <td style="padding: 10px 0; color: #222; font-weight: 700; font-size: 16px;">{esc_violation_type}</td>
             </tr>
             <tr style="border-top: 1px solid #eee;">
               <td style="padding: 10px 0; color: #666; font-weight: 600;">Location</td>
-              <td style="padding: 10px 0; color: #222;">{short_address}</td>
+              <td style="padding: 10px 0; color: #222;">{esc_short_address}</td>
             </tr>
             <tr style="border-top: 1px solid #eee;">
               <td style="padding: 10px 0; color: #666; font-weight: 600;">Full Address</td>
-              <td style="padding: 10px 0; color: #222; font-size: 13px;">{address}</td>
+              <td style="padding: 10px 0; color: #222; font-size: 13px;">{esc_address}</td>
             </tr>
             <tr style="border-top: 1px solid #eee;">
               <td style="padding: 10px 0; color: #666; font-weight: 600;">Coordinates</td>
-              <td style="padding: 10px 0; color: #222;">{location}</td>
+              <td style="padding: 10px 0; color: #222;">{esc_location}</td>
             </tr>
             <tr style="border-top: 1px solid #eee;">
               <td style="padding: 10px 0; color: #666; font-weight: 600;">Reported At</td>
-              <td style="padding: 10px 0; color: #222;">{timestamp}</td>
+              <td style="padding: 10px 0; color: #222;">{esc_timestamp}</td>
             </tr>
             <tr style="border-top: 1px solid #eee;">
               <td style="padding: 10px 0; color: #666; font-weight: 600;">Report ID</td>
-              <td style="padding: 10px 0; color: #999; font-size: 12px;">{violation_id}</td>
+              <td style="padding: 10px 0; color: #999; font-size: 12px;">{esc_violation_id}</td>
             </tr>
           </table>
 
           <div style="margin-top: 24px; text-align: center;">
-            <a href="{image_url}" style="display: inline-block; background: #1976d2; color: #fff;
+            <a href="{esc_image_url}" style="display: inline-block; background: #1976d2; color: #fff;
                text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 600;
                font-size: 14px;">View Evidence Image</a>
           </div>
@@ -84,21 +100,71 @@ async def send_violation_alert_email(
     </html>
     """
 
+    plain_body = (
+        f"Violation Report Alert\n\n"
+        f"Violation Type: {violation_type}\n"
+        f"Location: {short_address}\n"
+        f"Full Address: {address}\n"
+        f"Coordinates: {location}\n"
+        f"Reported At: {timestamp}\n"
+        f"Report ID: {violation_id}\n\n"
+        f"View Evidence: {image_url}\n\n"
+        f"SafeStreets — AI-Powered Traffic Violation Detection"
+    )
+
     msg = MIMEMultipart("alternative")
     msg["From"] = settings.SMTP_USER
     msg["To"] = recipient
     msg["Subject"] = subject
-    msg.attach(MIMEText(html_body, "html"))
+    msg.attach(MIMEText(plain_body, "plain", "utf-8"))
+    msg.attach(MIMEText(html_body, "html", "utf-8"))
+
+    # Determine TLS mode (default: starttls)
+    tls_mode = (getattr(settings, "SMTP_TLS_MODE", "starttls") or "starttls").lower().strip()
+
+    start_tls = False
+    use_tls = False
+
+    if tls_mode == "starttls":
+        start_tls = True
+    elif tls_mode in ("tls", "ssl", "implicit_tls"):
+        use_tls = True
+    elif tls_mode in ("none", "plain", "off"):
+        pass
+    else:
+        logger.warning("[EMAIL] Unknown SMTP_TLS_MODE '%s' — defaulting to STARTTLS", tls_mode)
+        start_tls = True
+
+    try:
+        smtp_port = int(settings.SMTP_PORT)
+    except (TypeError, ValueError):
+        smtp_port = None
+
+    if smtp_port is not None:
+        if use_tls and smtp_port != 465:
+            logger.warning(
+                "[EMAIL] SMTP_TLS_MODE='%s' implies implicit TLS but SMTP_PORT=%s is not 465; check your configuration.",
+                tls_mode, smtp_port,
+            )
+        if start_tls and smtp_port == 465:
+            logger.warning(
+                "[EMAIL] STARTTLS on port 465 is unusual; consider setting SMTP_TLS_MODE='tls' for implicit TLS.",
+            )
+        if not start_tls and not use_tls and smtp_port == 465:
+            logger.warning(
+                "[EMAIL] No TLS configured on port 465; consider adjusting SMTP_TLS_MODE.",
+            )
 
     try:
         await aiosmtplib.send(
             msg,
             hostname=settings.SMTP_HOST,
             port=settings.SMTP_PORT,
-            start_tls=True,
+            start_tls=start_tls,
+            use_tls=use_tls,
             username=settings.SMTP_USER,
             password=settings.SMTP_PASSWORD,
         )
-        print(f"[EMAIL] Alert sent to {recipient} for violation {violation_id}")
+        logger.info("[EMAIL] Alert sent to %s for violation %s", recipient, violation_id)
     except Exception as e:
-        print(f"[EMAIL] Failed to send alert: {e}")
+        logger.error("[EMAIL] Failed to send alert: %s", e)
