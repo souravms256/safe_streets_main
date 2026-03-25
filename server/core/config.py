@@ -34,6 +34,10 @@ class Settings:
     SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
     SMTP_TLS_MODE: str = os.getenv("SMTP_TLS_MODE", "starttls")
     SMTP_TIMEOUT_SECONDS: int = int(os.getenv("SMTP_TIMEOUT_SECONDS", 20))
+    RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
+    RESEND_FROM_EMAIL: str = os.getenv("RESEND_FROM_EMAIL", "")
+    RESEND_REPLY_TO: str = os.getenv("RESEND_REPLY_TO", "")
+    RESEND_TIMEOUT_SECONDS: int = int(os.getenv("RESEND_TIMEOUT_SECONDS", 20))
     ALERT_RECIPIENT_EMAIL: str = os.getenv("ALERT_RECIPIENT_EMAIL", "")
 
 

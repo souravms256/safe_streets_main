@@ -1,31 +1,32 @@
+import asyncio
 import html as html_lib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import requests
 from core.config import settings
 from utils.logging import get_logger
 
 logger = get_logger("email_service")
 
-try:
-    import aiosmtplib
-except ImportError:
-    aiosmtplib = None
+RESEND_SEND_EMAIL_URL = "https://api.resend.com/emails"
 
 
-def _is_connect_timeout_error(error: Exception) -> bool:
-    if aiosmtplib is None:
-        return False
-
-    timeout_error_types = tuple(
-        err_type
-        for err_type in (
-            getattr(aiosmtplib.errors, "SMTPConnectTimeoutError", None),
-            getattr(aiosmtplib.errors, "SMTPTimeoutError", None),
-            TimeoutError,
-        )
-        if err_type is not None
+def _send_with_resend(payload: dict) -> dict:
+    response = requests.post(
+        RESEND_SEND_EMAIL_URL,
+        headers={
+            "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+            "Content-Type": "application/json",
+            "User-Agent": "safe-streets-backend/1.0",
+        },
+        json=payload,
+        timeout=settings.RESEND_TIMEOUT_SECONDS,
     )
-    return isinstance(error, timeout_error_types)
+
+    if not response.ok:
+        raise RuntimeError(
+            f"Resend API error {response.status_code}: {response.text}"
+        )
+
+    return response.json()
 
 
 async def send_violation_alert_email(
@@ -41,12 +42,12 @@ async def send_violation_alert_email(
     Send an email alert to the configured recipient when a new violation is reported.
     Runs as a background task — failures are logged but never crash the API.
     """
-    if aiosmtplib is None:
-        logger.warning("[EMAIL] aiosmtplib not installed — skipping email notification")
+    if not settings.RESEND_API_KEY:
+        logger.warning("[EMAIL] RESEND_API_KEY not configured — skipping email notification")
         return
 
-    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
-        logger.warning("[EMAIL] SMTP credentials not configured — skipping email notification")
+    if not settings.RESEND_FROM_EMAIL:
+        logger.warning("[EMAIL] RESEND_FROM_EMAIL not configured — skipping email notification")
         return
 
     recipient = (getattr(settings, "ALERT_RECIPIENT_EMAIL", "") or "").strip()
@@ -128,106 +129,31 @@ async def send_violation_alert_email(
         f"SafeStreets — AI-Powered Traffic Violation Detection"
     )
 
-    msg = MIMEMultipart("alternative")
-    msg["From"] = settings.SMTP_USER
-    msg["To"] = recipient
-    msg["Subject"] = subject
-    msg.attach(MIMEText(plain_body, "plain", "utf-8"))
-    msg.attach(MIMEText(html_body, "html", "utf-8"))
-
-    # Determine TLS mode (default: starttls)
-    tls_mode = (getattr(settings, "SMTP_TLS_MODE", "starttls") or "starttls").lower().strip()
-
-    start_tls = False
-    use_tls = False
-
-    if tls_mode == "starttls":
-        start_tls = True
-    elif tls_mode in ("tls", "ssl", "implicit_tls"):
-        use_tls = True
-    elif tls_mode in ("none", "plain", "off"):
-        pass
-    else:
-        logger.warning("[EMAIL] Unknown SMTP_TLS_MODE '%s' — defaulting to STARTTLS", tls_mode)
-        start_tls = True
-
     try:
-        smtp_port = int(settings.SMTP_PORT)
-    except (TypeError, ValueError):
-        smtp_port = None
+        payload = {
+            "from": settings.RESEND_FROM_EMAIL,
+            "to": [recipient],
+            "subject": subject,
+            "html": html_body,
+            "text": plain_body,
+        }
 
-    if smtp_port is not None:
-        if use_tls and smtp_port != 465:
-            logger.warning(
-                "[EMAIL] SMTP_TLS_MODE='%s' implies implicit TLS but SMTP_PORT=%s is not 465; check your configuration.",
-                tls_mode, smtp_port,
-            )
-        if start_tls and smtp_port == 465:
-            logger.warning(
-                "[EMAIL] STARTTLS on port 465 is unusual; consider setting SMTP_TLS_MODE='tls' for implicit TLS.",
-            )
-        if not start_tls and not use_tls and smtp_port == 465:
-            logger.warning(
-                "[EMAIL] No TLS configured on port 465; consider adjusting SMTP_TLS_MODE.",
-            )
+        if settings.RESEND_REPLY_TO:
+            payload["reply_to"] = [settings.RESEND_REPLY_TO]
 
-    async def _send_email(
-        port: int,
-        *,
-        start_tls_value: bool,
-        use_tls_value: bool,
-    ) -> None:
-        await aiosmtplib.send(
-            msg,
-            hostname=settings.SMTP_HOST,
-            port=port,
-            start_tls=start_tls_value,
-            use_tls=use_tls_value,
-            username=settings.SMTP_USER,
-            password=settings.SMTP_PASSWORD,
-            timeout=settings.SMTP_TIMEOUT_SECONDS,
+        response_data = await asyncio.to_thread(
+            _send_with_resend,
+            payload,
         )
-
-    try:
-        await _send_email(
-            settings.SMTP_PORT,
-            start_tls_value=start_tls,
-            use_tls_value=use_tls,
+        logger.info(
+            "[EMAIL] Alert sent to %s for violation %s via Resend (email_id=%s)",
+            recipient,
+            violation_id,
+            response_data.get("id", "unknown"),
         )
-        logger.info("[EMAIL] Alert sent to %s for violation %s", recipient, violation_id)
     except Exception as e:
-        is_gmail_465 = (
-            (settings.SMTP_HOST or "").strip().lower() == "smtp.gmail.com"
-            and int(settings.SMTP_PORT) == 465
-        )
-
-        if is_gmail_465 and _is_connect_timeout_error(e):
-            logger.warning(
-                "[EMAIL] Timed out connecting to Gmail on port 465. Retrying on port 587 with STARTTLS. "
-                "This usually means outbound port 465 is blocked by the VM provider, firewall, or network policy."
-            )
-            try:
-                await _send_email(
-                    587,
-                    start_tls_value=True,
-                    use_tls_value=False,
-                )
-                logger.info(
-                    "[EMAIL] Alert sent to %s for violation %s using Gmail STARTTLS fallback on port 587",
-                    recipient,
-                    violation_id,
-                )
-                return
-            except Exception as retry_error:
-                logger.error(
-                    "[EMAIL] Gmail fallback on port 587 also failed: %s. "
-                    "Check SMTP credentials, App Password, and outbound SMTP rules on the VM.",
-                    retry_error,
-                )
-                return
-
         logger.error(
-            "[EMAIL] Failed to send alert: %s. Check SMTP_HOST/SMTP_PORT/SMTP_TLS_MODE, "
-            "App Password configuration, and whether the VM allows outbound SMTP traffic.",
+            "[EMAIL] Failed to send alert via Resend: %s. Check RESEND_API_KEY, "
+            "RESEND_FROM_EMAIL, domain verification, and Render environment variables.",
             e,
         )
