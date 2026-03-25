@@ -138,7 +138,7 @@ export default function DashboardPage() {
 
     return (
         <PullToRefresh onRefresh={handleRefresh}>
-            <div className="min-h-screen bg-slate-50 py-4 sm:py-8 dark:bg-slate-950">
+            <div className="min-h-screen bg-blue-50 py-4 sm:py-8 dark:bg-slate-900">
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -158,8 +158,8 @@ export default function DashboardPage() {
                                     </span>
                                 )}
                             </div>
-                            <p className="text-sm text-slate-600 dark:text-slate-400">
-                                Welcome back, <span className="font-semibold text-slate-900 dark:text-slate-100">{user?.full_name || "User"}</span>
+                            <p className="text-sm text-slate-700 dark:text-slate-300">
+                                Welcome back, <span className="font-semibold text-blue-900 dark:text-blue-200">{user?.full_name || "User"}</span>
                             </p>
                         </div>
                         <Link href="/report" className="hidden sm:block">
@@ -250,7 +250,7 @@ export default function DashboardPage() {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ delay: 0.5 }}
-                            className="mt-8 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50"
+                            className="mt-8 rounded-2xl border-2 border-dashed border-blue-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50"
                         >
                             <EmptyState
                                 icon={AlertCircle}

@@ -36,6 +36,7 @@ export default function ReportPage() {
     const [files, setFiles] = useState<File[]>([]);
     const [previews, setPreviews] = useState<string[]>([]);
     const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+    const [locationError, setLocationError] = useState<string | null>(null);
     const [addressData, setAddressData] = useState<AddressData | null>(null);
     const [addressLoading, setAddressLoading] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -98,7 +99,7 @@ export default function ReportPage() {
     }, []);
 
     useEffect(() => {
-        handleGetLocation();
+        void handleGetLocation(false);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -108,34 +109,81 @@ export default function ReportPage() {
         }
     }, [location, resolveAddress]);
 
-    const handleGetLocation = () => {
+    const getCurrentPosition = useCallback((options: PositionOptions) => {
+        return new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, options);
+        });
+    }, []);
+
+    const getGeolocationMessage = useCallback((error: GeolocationPositionError) => {
+        if (error.code === 1) return "Location permission denied.";
+        if (error.code === 2) {
+            return "Location is available on your device, but the browser could not get a fix yet. Turn on Wi-Fi, make sure your system location is active, and try Detect Location again.";
+        }
+        if (error.code === 3) return "Location request timed out. Try again in an open area or with Wi-Fi enabled.";
+        return "Unable to retrieve location.";
+    }, []);
+
+    const handleGetLocation = useCallback(async (showToast = true) => {
         if (!navigator.geolocation) {
-            toast.error("Geolocation is not supported by your browser");
+            const msg = "Geolocation is not supported by your browser.";
+            setLocationError(msg);
+            if (showToast) toast.error(msg);
             return;
         }
+
         setLoading(true);
         setAddressData(null);
+        setLocationError(null);
 
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
+        try {
+            if ("permissions" in navigator && navigator.permissions?.query) {
+                const permission = await navigator.permissions.query({ name: "geolocation" });
+                if (permission.state === "denied") {
+                    const msg = "Location permission is blocked in the browser. Enable it for this site and try again.";
+                    setLocationError(msg);
+                    if (showToast) toast.error(msg);
+                    setLoading(false);
+                    return;
+                }
+            }
+        } catch (error) {
+            console.warn("Unable to read geolocation permission state:", error);
+        }
+
+        const attempts: PositionOptions[] = [
+            { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
+            { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
+        ];
+
+        let lastError: GeolocationPositionError | null = null;
+
+        for (const options of attempts) {
+            try {
+                const position = await getCurrentPosition(options);
                 setLocation({
                     lat: position.coords.latitude,
                     lng: position.coords.longitude,
                 });
+                setLocationError(null);
                 setLoading(false);
-            },
-            (error) => {
-                console.error("Geolocation Error:", error.message);
-                setLoading(false);
-                let msg = "Unable to retrieve location.";
-                if (error.code === 1) msg = "Location permission denied.";
-                else if (error.code === 2) msg = "Position unavailable.";
-                else if (error.code === 3) msg = "Location request timed out.";
-                toast.error(msg);
-            },
-            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-        );
-    };
+                return;
+            } catch (error) {
+                const geoError = error as GeolocationPositionError;
+                lastError = geoError;
+                console.error("Geolocation Error:", geoError.message);
+
+                if (geoError.code === 1) {
+                    break;
+                }
+            }
+        }
+
+        const msg = lastError ? getGeolocationMessage(lastError) : "Unable to retrieve location.";
+        setLocationError(msg);
+        if (showToast) toast.error(msg);
+        setLoading(false);
+    }, [getCurrentPosition, getGeolocationMessage]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -296,12 +344,18 @@ export default function ReportPage() {
                                         type="button"
                                         variant="outline"
                                         size="sm"
-                                        onClick={handleGetLocation}
+                                        onClick={() => void handleGetLocation()}
                                         isLoading={loading}
                                     >
                                         Detect Location
                                     </Button>
                                 </div>
+
+                                {locationError && (
+                                    <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
+                                        {locationError}
+                                    </div>
+                                )}
 
                                 {(addressLoading || addressData) && (
                                     <div className="mt-3 border-t border-slate-200 pt-3 dark:border-slate-700">
