@@ -15,6 +15,7 @@
 
 # next.js
 /.next/
+/.next_backup_*/
 /out/
 
 # production
@@ -38,6 +39,7 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+*.tsbuildinfo_backup_*
 next-env.d.ts
 
 # Capacitor

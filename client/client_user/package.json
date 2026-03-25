@@ -21,7 +21,7 @@
         "leaflet": "^1.9.4",
         "leaflet.heat": "^0.2.0",
         "lucide-react": "^0.563.0",
-        "next": "^15.1.12",
+        "next": "15.1.12",
         "react": "^19.2.4",
         "react-dom": "^19.2.4",
         "react-hot-toast": "^2.6.0",
@@ -36,7 +36,7 @@
         "@types/react-dom": "^19",
         "ajv": "^8.17.1",
         "eslint": "^8",
-        "eslint-config-next": "15.1.7",
+        "eslint-config-next": "15.1.12",
         "tailwindcss": "^4",
         "typescript": "^5",
         "uri-js": "^4.4.1"

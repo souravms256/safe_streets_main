@@ -5,10 +5,11 @@ from core.dependencies import get_current_user
 from utils.supabase_client import supabase
 from utils.geocoding import get_address_detailed
 from services.detector import detector
+from services.email_service import send_violation_alert_email
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Any, Dict
 import uuid
-from typing import Any, Dict
+import asyncio
 
 
 class ViolationResponse(BaseModel):
@@ -196,9 +197,23 @@ async def report_violation(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Database insert failed: {str(e)}")
 
+    # 7. Send email alert in the background (non-blocking)
+    saved = result.data[0]
+    asyncio.create_task(
+        send_violation_alert_email(
+            violation_type=detected_type,
+            address=address,
+            short_address=short_address,
+            location=f"{latitude}, {longitude}",
+            timestamp=timestamp,
+            image_url=public_url,
+            violation_id=saved.get("id", "unknown"),
+        )
+    )
+
     return {
         "message": "Violation reported successfully",
-        "violation": result.data[0],
+        "violation": saved,
         "detected_type": detected_type,
         "address": address,
         "short_address": short_address,
