@@ -162,7 +162,7 @@ export default function DashboardPage() {
                                 Welcome back, <span className="font-semibold text-blue-900 dark:text-blue-200">{user?.full_name || "User"}</span>
                             </p>
                         </div>
-                        <Link href="/report" className="hidden sm:block">
+                        <Link href="/scan" className="hidden sm:block">
                             <Button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white gap-2 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-blue-500/20">
                                 <Plus className="w-4 h-4" />
                                 New Report
@@ -257,7 +257,7 @@ export default function DashboardPage() {
                                 title="No reports found"
                                 description="Get started by reporting your first traffic violation to help make your community safer."
                                 actionLabel="New Report"
-                                onAction={() => router.push("/report")}
+                                onAction={() => router.push("/scan")}
                             />
                         </motion.div>
                     ) : (

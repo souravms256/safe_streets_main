@@ -6,6 +6,8 @@ import api from "@/services/api";
 import { Button } from "@/components/ui/Button";
 import toast from "react-hot-toast";
 import { compressImage, needsCompression, blobToFile } from "@/services/imageCompression";
+import { Capacitor } from "@capacitor/core";
+import { Geolocation } from "@capacitor/geolocation";
 
 interface AddressData {
     display_name: string;
@@ -36,6 +38,25 @@ const COMMUNITY_REPORT_TAG = "Community Related Issue";
 
 type ReportMode = typeof TRAFFIC_REPORT_MODE | typeof COMMUNITY_GARBAGE_REPORT_MODE;
 
+function hasGrantedLocationPermission(permission: Awaited<ReturnType<typeof Geolocation.checkPermissions>>) {
+    return permission.location === "granted" || permission.coarseLocation === "granted";
+}
+
+function getBrowserPosition(options: PositionOptions) {
+    return new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, options);
+    });
+}
+
+function getBrowserGeolocationMessage(error: GeolocationPositionError) {
+    if (error.code === 1) return "Location permission denied.";
+    if (error.code === 2) {
+        return "Location is available on your device, but the browser could not get a fix yet. Turn on Wi-Fi or GPS and try again.";
+    }
+    if (error.code === 3) return "Location request timed out. Please try again.";
+    return "Unable to retrieve location.";
+}
+
 export default function ReportPage() {
     const router = useRouter();
     const [files, setFiles] = useState<File[]>([]);
@@ -55,6 +76,7 @@ export default function ReportPage() {
     const [vehicleNumber, setVehicleNumber] = useState("");
 
     const isCommunityGarbageReport = reportMode === COMMUNITY_GARBAGE_REPORT_MODE;
+    const canCaptureFromCamera = Capacitor.isNativePlatform() || typeof window === "undefined";
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
@@ -117,81 +139,76 @@ export default function ReportPage() {
         }
     }, [location, resolveAddress]);
 
-    const getCurrentPosition = useCallback((options: PositionOptions) => {
-        return new Promise<GeolocationPosition>((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, options);
-        });
-    }, []);
-
-    const getGeolocationMessage = useCallback((error: GeolocationPositionError) => {
-        if (error.code === 1) return "Location permission denied.";
-        if (error.code === 2) {
-            return "Location is available on your device, but the browser could not get a fix yet. Turn on Wi-Fi, make sure your system location is active, and try Detect Location again.";
-        }
-        if (error.code === 3) return "Location request timed out. Try again in an open area or with Wi-Fi enabled.";
-        return "Unable to retrieve location.";
-    }, []);
-
     const handleGetLocation = useCallback(async (showToast = true) => {
-        if (!navigator.geolocation) {
-            const msg = "Geolocation is not supported by your browser.";
-            setLocationError(msg);
-            if (showToast) toast.error(msg);
-            return;
-        }
-
         setLoading(true);
         setAddressData(null);
         setLocationError(null);
 
         try {
-            if ("permissions" in navigator && navigator.permissions?.query) {
-                const permission = await navigator.permissions.query({ name: "geolocation" });
-                if (permission.state === "denied") {
-                    const msg = "Location permission is blocked in the browser. Enable it for this site and try again.";
+            if (!Capacitor.isNativePlatform()) {
+                if (!navigator.geolocation) {
+                    const msg = "Geolocation is not supported by your browser.";
+                    setLocationError(msg);
+                    if (showToast) toast.error(msg);
+                    setLoading(false);
+                    return;
+                }
+
+                const position = await getBrowserPosition({
+                    enableHighAccuracy: true,
+                    timeout: 20000,
+                    maximumAge: 0,
+                });
+
+                setLocation({
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude,
+                });
+                setLoading(false);
+                return;
+            }
+
+            // Capacitor handles both Web and Native permissions elegantly
+            const permission = await Geolocation.checkPermissions();
+            if (!hasGrantedLocationPermission(permission)) {
+                const request = await Geolocation.requestPermissions();
+                if (!hasGrantedLocationPermission(request)) {
+                    const msg = "Location permission is blocked. Please enable it for this app and try again.";
                     setLocationError(msg);
                     if (showToast) toast.error(msg);
                     setLoading(false);
                     return;
                 }
             }
+
+            const position = await Geolocation.getCurrentPosition({
+                enableHighAccuracy: true,
+                timeout: 20000,
+                maximumAge: 0
+            });
+
+            setLocation({
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+            });
+            setLocationError(null);
+            setLoading(false);
         } catch (error) {
-            console.warn("Unable to read geolocation permission state:", error);
+            console.error("Geolocation Error:", error);
+            const msg =
+                typeof error === "object" &&
+                error !== null &&
+                "code" in error &&
+                typeof (error as GeolocationPositionError).code === "number"
+                    ? getBrowserGeolocationMessage(error as GeolocationPositionError)
+                    : (error as Error).message === "Location services are not enabled"
+                      ? "Location services are disabled on your device. Turn on your GPS or Location Service and try again."
+                      : (error as Error).message || "Unable to retrieve location. Please check your permissions.";
+            setLocationError(msg);
+            if (showToast) toast.error(msg);
+            setLoading(false);
         }
-
-        const attempts: PositionOptions[] = [
-            { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
-            { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
-        ];
-
-        let lastError: GeolocationPositionError | null = null;
-
-        for (const options of attempts) {
-            try {
-                const position = await getCurrentPosition(options);
-                setLocation({
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude,
-                });
-                setLocationError(null);
-                setLoading(false);
-                return;
-            } catch (error) {
-                const geoError = error as GeolocationPositionError;
-                lastError = geoError;
-                console.error("Geolocation Error:", geoError.message);
-
-                if (geoError.code === 1) {
-                    break;
-                }
-            }
-        }
-
-        const msg = lastError ? getGeolocationMessage(lastError) : "Unable to retrieve location.";
-        setLocationError(msg);
-        if (showToast) toast.error(msg);
-        setLoading(false);
-    }, [getCurrentPosition, getGeolocationMessage]);
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -336,43 +353,20 @@ export default function ReportPage() {
 
                             {previews.length < 3 && (
                                 <div className="space-y-3">
-                                    {/* Mobile */}
-                                    <div className="flex gap-3 md:hidden">
-                                        <label className="flex-1 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-blue-300 bg-blue-50/50 p-6 text-center cursor-pointer transition-all active:scale-[0.97] dark:border-blue-800 dark:bg-blue-900/10">
-                                            <svg className="h-10 w-10 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            </svg>
-                                            <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">{previews.length === 0 ? 'Take Photo' : 'Add More'}</span>
-                                            <input type="file" className="hidden" accept="image/*" capture="environment" onChange={handleFileChange} multiple />
-                                        </label>
-                                        <label className="flex-1 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 bg-white p-6 text-center cursor-pointer transition-all active:scale-[0.97] dark:border-slate-700 dark:bg-slate-900">
-                                            <svg className="h-10 w-10 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                            </svg>
-                                            <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">Gallery</span>
-                                            <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} multiple />
-                                        </label>
-                                    </div>
-
-                                    {/* Desktop */}
-                                    <label
-                                        htmlFor="file-upload-desktop"
-                                        className="hidden md:flex h-48 w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-white p-6 text-center transition-all hover:border-blue-500 hover:bg-blue-50/50 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-blue-400 dark:hover:bg-blue-900/10"
-                                    >
-                                        <svg className="mx-auto h-12 w-12 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <label className="flex min-h-[160px] w-full cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-blue-300 bg-blue-50/50 p-6 text-center transition-all hover:border-blue-500 hover:bg-blue-50 dark:border-blue-800 dark:bg-blue-900/10 dark:hover:border-blue-600 dark:hover:bg-blue-900/20">
+                                        <svg className="mx-auto h-12 w-12 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                                         </svg>
-                                        <div className="mt-4 text-sm leading-6 text-slate-600 dark:text-slate-400">
-                                            <span className="font-semibold text-blue-600 hover:text-blue-500">Upload a file</span>
+                                        <div className="mt-2 text-sm text-blue-600 dark:text-blue-400">
+                                            <span className="font-semibold hover:text-blue-500">Upload a file</span>
                                             <span className="pl-1">or take a photo</span>
                                         </div>
                                         <input
-                                            id="file-upload-desktop"
                                             type="file"
                                             className="hidden"
                                             accept="image/*"
+                                            capture={canCaptureFromCamera ? "environment" : undefined}
                                             onChange={handleFileChange}
                                             multiple
                                         />
@@ -387,13 +381,13 @@ export default function ReportPage() {
                                 Location
                             </label>
                             <div className="rounded-lg border border-slate-300 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div className="flex min-w-0 items-center gap-2">
                                         <svg className="h-4 w-4 text-blue-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                         </svg>
-                                        <span className="text-sm text-slate-600 dark:text-slate-400">
+                                        <span className="text-sm text-slate-600 dark:text-slate-400 break-words">
                                             {location
                                                 ? `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`
                                                 : "No location detected"}
@@ -405,6 +399,7 @@ export default function ReportPage() {
                                         size="sm"
                                         onClick={() => void handleGetLocation()}
                                         isLoading={loading}
+                                        className="w-full sm:w-auto whitespace-nowrap"
                                     >
                                         Detect Location
                                     </Button>

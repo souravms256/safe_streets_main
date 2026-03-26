@@ -9,6 +9,7 @@ import Navbar from "@/components/Navbar";
 import PullToRefresh from "@/components/PullToRefresh";
 
 interface LeaderboardUser {
+    id: string;
     full_name: string;
     points: number;
 }
@@ -18,7 +19,7 @@ const MEDALS = ["🥇", "🥈", "🥉"];
 export default function LeaderboardPage() {
     const router = useRouter();
     const [leaders, setLeaders] = useState<LeaderboardUser[]>([]);
-    const [currentUser, setCurrentUser] = useState<{ full_name: string; points?: number } | null>(null);
+    const [currentUser, setCurrentUser] = useState<{ id: string; full_name: string; points?: number } | null>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
@@ -48,7 +49,7 @@ export default function LeaderboardPage() {
         fetchData();
     }, [router, fetchData]);
 
-    const isCurrentUser = (name: string) => currentUser?.full_name === name;
+    const isCurrentUser = (userId: string) => currentUser?.id === userId;
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -108,7 +109,7 @@ export default function LeaderboardPage() {
                                 </div>
                             </div>
                             {leaders.length > 0 && (() => {
-                                const rank = leaders.findIndex(l => l.full_name === currentUser.full_name);
+                                const rank = leaders.findIndex((l) => l.id === currentUser.id);
                                 return rank >= 0 ? (
                                     <p className="text-sm text-blue-200 mt-2">
                                         You&apos;re ranked <span className="font-bold text-white">#{rank + 1}</span> out of {leaders.length}
@@ -146,10 +147,10 @@ export default function LeaderboardPage() {
                     ) : (
                         <div className="space-y-2">
                             {leaders.map((leader, index) => {
-                                const isCurrent = isCurrentUser(leader.full_name);
+                                const isCurrent = isCurrentUser(leader.id);
                                 return (
                                     <motion.div
-                                        key={leader.full_name}
+                                        key={leader.id}
                                         initial={{ opacity: 0, x: -20 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: index * 0.05 }}
