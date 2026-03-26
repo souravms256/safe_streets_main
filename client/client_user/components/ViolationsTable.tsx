@@ -20,6 +20,12 @@ interface ViolationDetails {
     valid_plates?: string[];
     plates_detected?: number;
     detector_source?: string;
+    manual_detection?: boolean;
+    community_issue?: boolean;
+    community_issue_type?: string;
+    report_mode?: string;
+    report_category?: string;
+    garbage_detected?: boolean;
     analysis_summary?: string;
     detections?: Detection[];
     output_image?: string;
@@ -108,6 +114,10 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
     function closeModal() {
         setSelectedViolation(null);
     }
+
+    const isCommunityReport =
+        selectedViolation?.details?.report_mode === "community_garbage" ||
+        selectedViolation?.details?.detector_source === "user_reported";
 
     return (
         <>
@@ -368,7 +378,7 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                         {/* Header */}
                         <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
                             <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                                AI Detection Details
+                                {isCommunityReport ? "Community Issue Details" : "AI Detection Details"}
                             </h3>
                             <button
                                 onClick={closeModal}
@@ -414,10 +424,10 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                             {selectedViolation.details && (
                                 <div className="space-y-4">
                                     <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
-                                        AI Analysis Results
+                                        {isCommunityReport ? "Community Report Summary" : "AI Analysis Results"}
                                     </h4>
 
-                                    {selectedViolation.details.detector_source && (
+                                    {selectedViolation.details.detector_source && !isCommunityReport && (
                                         <p className="text-xs text-slate-500 dark:text-slate-400">
                                             Source: {
                                                 selectedViolation.details.detector_source === "parallel_ensemble"
@@ -429,46 +439,69 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                                         </p>
                                     )}
 
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                        <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg text-center">
-                                            <p className="text-2xl font-bold text-red-600 dark:text-red-400">
-                                                {selectedViolation.details.helmet_violations ?? 0}
-                                            </p>
-                                            <p className="text-xs text-red-500 dark:text-red-400">Helmet Violations</p>
+                                    {isCommunityReport ? (
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                            <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg text-center">
+                                                <p className="text-base font-bold text-emerald-700 dark:text-emerald-300">
+                                                    {selectedViolation.details.community_issue_type || "Garbage"}
+                                                </p>
+                                                <p className="text-xs text-emerald-600 dark:text-emerald-400">Issue Type</p>
+                                            </div>
+                                            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center">
+                                                <p className="text-base font-bold text-blue-700 dark:text-blue-300">
+                                                    {selectedViolation.details.report_category || "Community Related Issue"}
+                                                </p>
+                                                <p className="text-xs text-blue-600 dark:text-blue-400">Category</p>
+                                            </div>
+                                            <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg text-center">
+                                                <p className="text-base font-bold text-slate-800 dark:text-slate-200">
+                                                    User Reported
+                                                </p>
+                                                <p className="text-xs text-slate-500 dark:text-slate-400">Detection Mode</p>
+                                            </div>
                                         </div>
-                                        <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-center">
-                                            <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                                                {selectedViolation.details.triple_riding ? "Yes" : "No"}
-                                            </p>
-                                            <p className="text-xs text-orange-500 dark:text-orange-400">Triple Riding</p>
+                                    ) : (
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                            <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg text-center">
+                                                <p className="text-2xl font-bold text-red-600 dark:text-red-400">
+                                                    {selectedViolation.details.helmet_violations ?? 0}
+                                                </p>
+                                                <p className="text-xs text-red-500 dark:text-red-400">Helmet Violations</p>
+                                            </div>
+                                            <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-center">
+                                                <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                                                    {selectedViolation.details.triple_riding ? "Yes" : "No"}
+                                                </p>
+                                                <p className="text-xs text-orange-500 dark:text-orange-400">Triple Riding</p>
+                                            </div>
+                                            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center">
+                                                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                                                    {selectedViolation.details.rider_count ?? 0}
+                                                </p>
+                                                <p className="text-xs text-blue-500 dark:text-blue-400">Riders Detected</p>
+                                            </div>
+                                            <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg text-center">
+                                                <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+                                                    {selectedViolation.details.no_parking ? "Yes" : "No"}
+                                                </p>
+                                                <p className="text-xs text-amber-500 dark:text-amber-400">No Parking</p>
+                                            </div>
+                                            <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg text-center">
+                                                <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                                                    {selectedViolation.details.potholes_detected ?? 0}
+                                                </p>
+                                                <p className="text-xs text-indigo-500 dark:text-indigo-400">Potholes Detected</p>
+                                            </div>
+                                            <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg text-center">
+                                                <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                                                    {selectedViolation.details.plates_detected ?? selectedViolation.details.plate_numbers?.length ?? 0}
+                                                </p>
+                                                <p className="text-xs text-emerald-500 dark:text-emerald-400">Plates Read</p>
+                                            </div>
                                         </div>
-                                        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center">
-                                            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                                                {selectedViolation.details.rider_count ?? 0}
-                                            </p>
-                                            <p className="text-xs text-blue-500 dark:text-blue-400">Riders Detected</p>
-                                        </div>
-                                        <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg text-center">
-                                            <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                                                {selectedViolation.details.no_parking ? "Yes" : "No"}
-                                            </p>
-                                            <p className="text-xs text-amber-500 dark:text-amber-400">No Parking</p>
-                                        </div>
-                                        <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg text-center">
-                                            <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
-                                                {selectedViolation.details.potholes_detected ?? 0}
-                                            </p>
-                                            <p className="text-xs text-indigo-500 dark:text-indigo-400">Potholes Detected</p>
-                                        </div>
-                                        <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg text-center">
-                                            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                                                {selectedViolation.details.plates_detected ?? selectedViolation.details.plate_numbers?.length ?? 0}
-                                            </p>
-                                            <p className="text-xs text-emerald-500 dark:text-emerald-400">Plates Read</p>
-                                        </div>
-                                    </div>
+                                    )}
 
-                                    {selectedViolation.details.plate_numbers && selectedViolation.details.plate_numbers.length > 0 && (
+                                    {!isCommunityReport && selectedViolation.details.plate_numbers && selectedViolation.details.plate_numbers.length > 0 && (
                                         <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
                                             <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                                                 Recognized Number Plates
@@ -491,7 +524,7 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                                     )}
 
                                     {/* Detections List */}
-                                    {selectedViolation.details.detections && selectedViolation.details.detections.length > 0 && (
+                                    {!isCommunityReport && selectedViolation.details.detections && selectedViolation.details.detections.length > 0 && (
                                         <div>
                                             <h5 className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                                                 Objects Detected

@@ -59,6 +59,9 @@ export default function ViolationsPage() {
     const [reviewViolation, setReviewViolation] = useState<Violation | null>(null);
     const [adminComment, setAdminComment] = useState("");
     const rowsPerPage = 10;
+    const isCommunityReview =
+        reviewViolation?.details?.report_mode === "community_garbage" ||
+        reviewViolation?.details?.detector_source === "user_reported";
 
     const fetchViolations = async () => {
         setLoading(true);
@@ -548,8 +551,15 @@ export default function ViolationsPage() {
                                 {/* Status & AI Detection */}
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="p-4 bg-white/5 rounded-xl border border-white/5">
-                                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">AI Detection</p>
+                                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            {isCommunityReview ? "Report Type" : "AI Detection"}
+                                        </p>
                                         <p className="mt-1 text-lg font-semibold text-white">{reviewViolation.violation_type}</p>
+                                        {isCommunityReview && (
+                                            <p className="mt-1 text-xs text-emerald-400">
+                                                User-reported community garbage issue
+                                            </p>
+                                        )}
                                     </div>
                                     <div className="p-4 bg-white/5 rounded-xl border border-white/5">
                                         <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Current Status</p>
