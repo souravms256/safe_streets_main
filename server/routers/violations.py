@@ -4,10 +4,11 @@ from core.limiter import limiter
 from core.dependencies import get_current_user
 from utils.supabase_client import supabase
 from utils.geocoding import get_address_detailed
+from utils.logging import violations_logger
 from services.detector import detector
 from services.email_service import send_violation_alert_email
 from datetime import datetime, timezone
-from typing import List, Any, Dict
+from typing import List, Any, Dict, Literal
 import uuid
 import asyncio
 
@@ -53,7 +54,7 @@ async def report_violation(
     latitude: float = Form(...),
     longitude: float = Form(...),
     timestamp: str = Form(...),
-    report_mode: str = Form(TRAFFIC_REPORT_MODE),
+    report_mode: Literal["traffic", "community_garbage"] = Form(TRAFFIC_REPORT_MODE),
     user_violation_type: str = Form(None),
     description: str = Form(None),
     severity: str = Form(None),
@@ -149,7 +150,7 @@ async def report_violation(
                 original_file_name
             )
         except Exception as e:
-            print(f"Original raw image upload failed (non-fatal): {e}")
+            violations_logger.warning("Original raw image upload failed (non-fatal): %s", e)
             original_url = None
 
     # 4. Upload additional images (if any)
@@ -168,7 +169,7 @@ async def report_violation(
                 supabase.storage.from_(BUCKET_NAME).get_public_url(extra_name)
             )
         except Exception as e:
-            print(f"Additional image upload failed: {e}")
+            violations_logger.warning("Additional image upload failed (non-fatal): %s", e)
 
     # 5. Build user-provided context
     user_input = {}

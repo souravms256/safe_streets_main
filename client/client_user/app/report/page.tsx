@@ -237,7 +237,7 @@ export default function ReportPage() {
             });
             const { detected_type } = response.data;
             if (isCommunityGarbageReport) {
-                toast.success("Successfully detected garbage and tagged it as a community issue.");
+                toast.success("Report submitted! Thanks for tagging this as a community garbage issue.");
             } else {
                 toast.success(`Report Submitted! AI Detected: ${detected_type}`);
             }
