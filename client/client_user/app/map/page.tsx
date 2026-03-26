@@ -123,7 +123,7 @@ export default function MapPage() {
         }
     };
 
-    const violationTypes = ["All", "Helmet Violation", "Triple Riding", "No Parking", "Pothole", "No Violation"];
+    const violationTypes = ["All", "Helmet Violation", "Triple Riding", "No Parking", "Pothole", "Community", "No Violation"];
 
     // Filter panel content (shared between desktop sidebar and mobile bottom sheet)
     const FilterContent = () => (

@@ -4,10 +4,11 @@ from core.limiter import limiter
 from core.dependencies import get_current_user
 from utils.supabase_client import supabase
 from utils.geocoding import get_address_detailed
+from utils.logging import violations_logger
 from services.detector import detector
 from services.email_service import send_violation_alert_email
 from datetime import datetime, timezone
-from typing import List, Any, Dict
+from typing import List, Any, Dict, Literal
 import uuid
 import asyncio
 
@@ -40,6 +41,9 @@ class DeleteResponse(BaseModel):
 router = APIRouter(prefix="/violations", tags=["Violations"])
 
 BUCKET_NAME = "violation-evidence"
+TRAFFIC_REPORT_MODE = "traffic"
+COMMUNITY_GARBAGE_REPORT_MODE = "community_garbage"
+COMMUNITY_GARBAGE_TYPE = "Community Issue - Garbage"
 
 
 @router.post("/", response_model=ReportResponse)
@@ -50,6 +54,7 @@ async def report_violation(
     latitude: float = Form(...),
     longitude: float = Form(...),
     timestamp: str = Form(...),
+    report_mode: Literal["traffic", "community_garbage"] = Form(TRAFFIC_REPORT_MODE),
     user_violation_type: str = Form(None),
     description: str = Form(None),
     severity: str = Form(None),
@@ -58,7 +63,8 @@ async def report_violation(
 ):
     """
     Upload a new violation report with 1–3 images.
-    - First image goes through AI detection
+    - First image goes through AI detection for traffic reports
+    - Community garbage reports skip AI detection
     - All images uploaded to Supabase Storage
     - Resolves human-readable address
     - Saves record to Database
@@ -81,53 +87,71 @@ async def report_violation(
                 detail=f"File {file.filename} is too large. Max size is 10MB.",
             )
 
-    # 1. Read primary file and run AI detection on it
+    # 1. Read primary file and determine detection path
     primary_file = files[0]
     contents = await primary_file.read()
-    detected_type, details, annotated_bytes = detector.detect(contents)
+    is_community_garbage_report = report_mode == COMMUNITY_GARBAGE_REPORT_MODE
+
+    if is_community_garbage_report:
+        detected_type = COMMUNITY_GARBAGE_TYPE
+        details = {
+            "analysis_summary": "Garbage was reported directly by a community member. No AI detection was used for this report.",
+            "community_issue": True,
+            "community_issue_type": "Garbage",
+            "garbage_detected": True,
+            "manual_detection": True,
+            "report_category": "Community Related Issue",
+            "report_mode": COMMUNITY_GARBAGE_REPORT_MODE,
+            "detector_source": "user_reported",
+            "detections": [],
+        }
+        annotated_bytes = contents
+    else:
+        detected_type, details, annotated_bytes = detector.detect(contents)
+        details["report_mode"] = TRAFFIC_REPORT_MODE
 
     # 2. Resolve Address
     address_data = get_address_detailed(latitude, longitude)
     address = address_data["display_name"]
     short_address = address_data["short_address"]
 
-    # 3. Upload primary images (both annotated and original)
+    # 3. Upload primary image
     file_ext = primary_file.filename.split(".")[-1] if primary_file.filename else "jpg"
     base_uuid = str(uuid.uuid4())
 
-    # Upload annotated image (for UI display)
-    annotated_file_name = f"{current_user['user_id']}/{base_uuid}.{file_ext}"
+    display_file_name = f"{current_user['user_id']}/{base_uuid}.{file_ext}"
     try:
         supabase.storage.from_(BUCKET_NAME).upload(
-            path=annotated_file_name,
+            path=display_file_name,
             file=annotated_bytes,
             file_options={"content-type": primary_file.content_type},
         )
-        public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(
-            annotated_file_name
-        )
+        public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(display_file_name)
     except Exception as e:
         import traceback
 
         traceback.print_exc()
         raise HTTPException(
-            status_code=500, detail=f"Annotated image upload failed: {str(e)}"
+            status_code=500,
+            detail=f"Primary image upload failed: {str(e)}",
         )
 
-    # Upload original raw image (for Active Learning retraining)
-    original_file_name = f"{current_user['user_id']}/{base_uuid}_original.{file_ext}"
-    try:
-        supabase.storage.from_(BUCKET_NAME).upload(
-            path=original_file_name,
-            file=contents,
-            file_options={"content-type": primary_file.content_type},
-        )
-        original_url = supabase.storage.from_(BUCKET_NAME).get_public_url(
-            original_file_name
-        )
-    except Exception as e:
-        print(f"Original raw image upload failed (non-fatal): {e}")
-        original_url = None
+    original_url = public_url
+    if not is_community_garbage_report:
+        # Upload original raw image for AI-assisted reports.
+        original_file_name = f"{current_user['user_id']}/{base_uuid}_original.{file_ext}"
+        try:
+            supabase.storage.from_(BUCKET_NAME).upload(
+                path=original_file_name,
+                file=contents,
+                file_options={"content-type": primary_file.content_type},
+            )
+            original_url = supabase.storage.from_(BUCKET_NAME).get_public_url(
+                original_file_name
+            )
+        except Exception as e:
+            violations_logger.warning("Original raw image upload failed (non-fatal): %s", e)
+            original_url = None
 
     # 4. Upload additional images (if any)
     additional_urls = []
@@ -145,11 +169,13 @@ async def report_violation(
                 supabase.storage.from_(BUCKET_NAME).get_public_url(extra_name)
             )
         except Exception as e:
-            print(f"Additional image upload failed: {e}")
+            violations_logger.warning("Additional image upload failed (non-fatal): %s", e)
 
     # 5. Build user-provided context
     user_input = {}
-    if user_violation_type:
+    if is_community_garbage_report:
+        user_input["user_violation_type"] = user_violation_type or "Community Related Issue"
+    elif user_violation_type:
         user_input["user_violation_type"] = user_violation_type
     if description:
         user_input["description"] = description

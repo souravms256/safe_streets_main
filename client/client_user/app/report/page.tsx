@@ -30,6 +30,11 @@ const VIOLATION_TYPES = [
 ];
 
 const SEVERITY_OPTIONS = ["Low", "Medium", "High"];
+const TRAFFIC_REPORT_MODE = "traffic";
+const COMMUNITY_GARBAGE_REPORT_MODE = "community_garbage";
+const COMMUNITY_REPORT_TAG = "Community Related Issue";
+
+type ReportMode = typeof TRAFFIC_REPORT_MODE | typeof COMMUNITY_GARBAGE_REPORT_MODE;
 
 export default function ReportPage() {
     const router = useRouter();
@@ -41,12 +46,15 @@ export default function ReportPage() {
     const [addressLoading, setAddressLoading] = useState(false);
     const [loading, setLoading] = useState(false);
     const [analyzing, setAnalyzing] = useState(false);
+    const [reportMode, setReportMode] = useState<ReportMode>(TRAFFIC_REPORT_MODE);
 
     // New user-input fields
     const [userViolationTypes, setUserViolationTypes] = useState<string[]>([]);
     const [description, setDescription] = useState("");
     const [severity, setSeverity] = useState("");
     const [vehicleNumber, setVehicleNumber] = useState("");
+
+    const isCommunityGarbageReport = reportMode === COMMUNITY_GARBAGE_REPORT_MODE;
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
@@ -209,19 +217,30 @@ export default function ReportPage() {
         formData.append("latitude", location.lat.toString());
         formData.append("longitude", location.lng.toString());
         formData.append("timestamp", new Date().toISOString());
+        formData.append("report_mode", reportMode);
 
         // Append optional user-input fields
-        if (userViolationTypes.length > 0) formData.append("user_violation_type", userViolationTypes.join(", "));
+        if (isCommunityGarbageReport) {
+            formData.append("user_violation_type", COMMUNITY_REPORT_TAG);
+        } else if (userViolationTypes.length > 0) {
+            formData.append("user_violation_type", userViolationTypes.join(", "));
+        }
         if (description) formData.append("description", description);
         if (severity) formData.append("severity", severity);
-        if (vehicleNumber) formData.append("vehicle_number", vehicleNumber);
+        if (!isCommunityGarbageReport && vehicleNumber) {
+            formData.append("vehicle_number", vehicleNumber);
+        }
 
         try {
             const response = await api.post("/violations/", formData, {
                 headers: { "Content-Type": "multipart/form-data" },
             });
             const { detected_type } = response.data;
-            toast.success(`Report Submitted! AI Detected: ${detected_type}`);
+            if (isCommunityGarbageReport) {
+                toast.success("Report submitted! Thanks for tagging this as a community garbage issue.");
+            } else {
+                toast.success(`Report Submitted! AI Detected: ${detected_type}`);
+            }
             router.push("/dashboard");
         } catch (error) {
             console.error("Submission failed:", error);
@@ -235,16 +254,56 @@ export default function ReportPage() {
         <div className="min-h-screen bg-slate-50 py-6 md:py-12 dark:bg-slate-950 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-lg px-4 sm:px-6">
                 <h1 className="mb-8 text-2xl font-bold text-slate-900 dark:text-white">
-                    Report a Traffic Violation
+                    {isCommunityGarbageReport ? "Report a Community Garbage Issue" : "Report a Traffic Violation"}
                 </h1>
 
                 <div className="rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-900">
                     <form onSubmit={handleSubmit} className="space-y-6">
+                        <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+                            <div>
+                                <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+                                    Report Mode
+                                </h2>
+                                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                    Choose whether this image should go through AI traffic analysis or be saved as a community garbage issue.
+                                </p>
+                            </div>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setReportMode(TRAFFIC_REPORT_MODE)}
+                                    className={`rounded-2xl border p-4 text-left transition-all ${
+                                        !isCommunityGarbageReport
+                                            ? "border-blue-600 bg-blue-50 shadow-md shadow-blue-600/10 dark:border-blue-500 dark:bg-blue-900/20"
+                                            : "border-slate-200 bg-white hover:border-blue-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-blue-700"
+                                    }`}
+                                >
+                                    <p className="text-sm font-semibold text-slate-900 dark:text-white">Traffic Violation</p>
+                                    <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                                        Runs AI on the first image and keeps the current reporting flow.
+                                    </p>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setReportMode(COMMUNITY_GARBAGE_REPORT_MODE)}
+                                    className={`rounded-2xl border p-4 text-left transition-all ${
+                                        isCommunityGarbageReport
+                                            ? "border-emerald-600 bg-emerald-50 shadow-md shadow-emerald-600/10 dark:border-emerald-500 dark:bg-emerald-900/20"
+                                            : "border-slate-200 bg-white hover:border-emerald-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-emerald-700"
+                                    }`}
+                                >
+                                    <p className="text-sm font-semibold text-slate-900 dark:text-white">Garbage Community Issue</p>
+                                    <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                                        Upload a garbage image, skip AI, and tag it directly as a community-related issue.
+                                    </p>
+                                </button>
+                            </div>
+                        </div>
 
                         {/* ── Image Upload ── */}
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-900 dark:text-white">
-                                Capture Evidence
+                                {isCommunityGarbageReport ? "Capture Garbage Image" : "Capture Evidence"}
                             </label>
 
                             {/* Image Preview Gallery */}
@@ -409,50 +468,60 @@ export default function ReportPage() {
                                 <svg className="h-4 w-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
-                                Violation Details
+                                {isCommunityGarbageReport ? "Community Issue Details" : "Violation Details"}
                             </h3>
 
-                            {/* Violation Type */}
-                            <div>
-                                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                                    Type of Violation
-                                </label>
-                                <div className="flex flex-wrap gap-2">
-                                    {VIOLATION_TYPES.map((type) => {
-                                        const isSelected = userViolationTypes.includes(type);
-                                        return (
-                                            <button
-                                                key={type}
-                                                type="button"
-                                                onClick={() => {
-                                                    setUserViolationTypes(prev =>
-                                                        prev.includes(type)
-                                                            ? prev.filter(t => t !== type)
-                                                            : [...prev, type]
-                                                    );
-                                                }}
-                                                className={`rounded-full px-3.5 py-1.5 text-sm font-medium border transition-all ${
-                                                    isSelected
-                                                        ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-600/25"
-                                                        : "bg-white border-slate-300 text-slate-600 hover:border-blue-400 hover:text-blue-600 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-400 dark:hover:border-blue-500 dark:hover:text-blue-400"
-                                                }`}
-                                            >
-                                                {isSelected && (
-                                                    <svg className="inline-block h-3.5 w-3.5 mr-1 -ml-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                                    </svg>
-                                                )}
-                                                {type}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                                {userViolationTypes.length > 0 && (
-                                    <p className="mt-2 text-xs text-blue-600 dark:text-blue-400">
-                                        Selected: {userViolationTypes.join(", ")}
+                            {isCommunityGarbageReport ? (
+                                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+                                    <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
+                                        This report will be tagged as a community-related garbage issue.
                                     </p>
-                                )}
-                            </div>
+                                    <p className="mt-1 text-xs text-emerald-700/80 dark:text-emerald-300/80">
+                                        No AI detection will run for this image.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div>
+                                    <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                                        Type of Violation
+                                    </label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {VIOLATION_TYPES.map((type) => {
+                                            const isSelected = userViolationTypes.includes(type);
+                                            return (
+                                                <button
+                                                    key={type}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setUserViolationTypes(prev =>
+                                                            prev.includes(type)
+                                                                ? prev.filter(t => t !== type)
+                                                                : [...prev, type]
+                                                        );
+                                                    }}
+                                                    className={`rounded-full px-3.5 py-1.5 text-sm font-medium border transition-all ${
+                                                        isSelected
+                                                            ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-600/25"
+                                                            : "bg-white border-slate-300 text-slate-600 hover:border-blue-400 hover:text-blue-600 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-400 dark:hover:border-blue-500 dark:hover:text-blue-400"
+                                                    }`}
+                                                >
+                                                    {isSelected && (
+                                                        <svg className="inline-block h-3.5 w-3.5 mr-1 -ml-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                                        </svg>
+                                                    )}
+                                                    {type}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    {userViolationTypes.length > 0 && (
+                                        <p className="mt-2 text-xs text-blue-600 dark:text-blue-400">
+                                            Selected: {userViolationTypes.join(", ")}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Description */}
                             <div>
@@ -462,7 +531,7 @@ export default function ReportPage() {
                                 <textarea
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
-                                    placeholder="Describe the violation or road issue you observed..."
+                                    placeholder={isCommunityGarbageReport ? "Describe the garbage issue you observed..." : "Describe the violation or road issue you observed..."}
                                     rows={3}
                                     maxLength={500}
                                     className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:placeholder-slate-500 transition-colors resize-none"
@@ -499,20 +568,21 @@ export default function ReportPage() {
                                 </div>
                             </div>
 
-                            {/* Vehicle Number */}
-                            <div>
-                                <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                                    Vehicle Number
-                                </label>
-                                <input
-                                    type="text"
-                                    value={vehicleNumber}
-                                    onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
-                                    placeholder="e.g. KA 01 AB 1234 (optional)"
-                                    maxLength={20}
-                                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:placeholder-slate-500 transition-colors uppercase tracking-wider"
-                                />
-                            </div>
+                            {!isCommunityGarbageReport && (
+                                <div>
+                                    <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                                        Vehicle Number
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={vehicleNumber}
+                                        onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
+                                        placeholder="e.g. KA 01 AB 1234 (optional)"
+                                        maxLength={20}
+                                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:placeholder-slate-500 transition-colors uppercase tracking-wider"
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         {/* ── Submit ── */}
@@ -522,7 +592,9 @@ export default function ReportPage() {
                             isLoading={analyzing}
                             disabled={files.length === 0 || !location}
                         >
-                            {analyzing ? "Analyzing Evidence..." : "Submit Report"}
+                            {analyzing
+                                ? (isCommunityGarbageReport ? "Submitting Garbage Report..." : "Analyzing Evidence...")
+                                : (isCommunityGarbageReport ? "Submit Garbage Report" : "Submit Report")}
                         </Button>
                     </form>
                 </div>
