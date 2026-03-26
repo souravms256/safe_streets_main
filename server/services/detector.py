@@ -13,15 +13,9 @@ class ViolationDetector:
 
     @staticmethod
     def detect(image_bytes: bytes) -> tuple[str, dict, bytes]:
-        """
-        Sends image to the AI model and returns violation results.
-
-        Returns:
-            (violation_type: str, data: dict, annotated_image_bytes: bytes)
-        """
         try:
             files    = {"file": ("image.jpg", image_bytes, "image/jpeg")}
-            response = requests.post(settings.MODEL_API_URL, files=files, timeout=30)
+            response = requests.post(settings.MODEL_API_URL, files=files, timeout=60)  # ← increased timeout for OCR
 
             if response.status_code != 200:
                 logger.error("Model API error: %s — %s", response.status_code, response.text)
@@ -40,10 +34,10 @@ class ViolationDetector:
             logger.info("Raw model response: %s", data)
 
             # ── Parse violations ────────────────────────────────────────────
-            # Support both new nested schema and old flat schema
-            violations_data     = data.get("violations", {})
-            detections_data     = data.get("detections", {})
-            road_data           = data.get("road_condition", {})
+            violations_data = data.get("violations", {})
+            detections_data = data.get("detections", {})
+            road_data       = data.get("road_condition", {})
+            anpr_data       = data.get("anpr", {})          # ← NEW
 
             # Helmet violations
             helmet_violations = int(
@@ -79,6 +73,18 @@ class ViolationDetector:
                 or 0
             )
 
+            # ── ANPR ────────────────────────────────────────────────────────
+            # ← NEW: extract plate numbers
+            plates = anpr_data.get("plates", [])
+            plate_numbers = [
+                p["plate_number"] for p in plates
+                if p.get("plate_number") and p["plate_number"] != "UNKNOWN"
+            ]
+            valid_plates = [
+                p["plate_number"] for p in plates
+                if p.get("valid_format") is True
+            ]
+
             # ── Build violation label ───────────────────────────────────────
             violations = []
 
@@ -97,11 +103,16 @@ class ViolationDetector:
             violation_type = ", ".join(violations) if violations else "No Violation"
 
             # ── Normalise data dict for frontend ────────────────────────────
-            data["helmet_violations"]   = helmet_violations
-            data["triple_riding"]       = triple_riding
-            data["max_riders_on_bike"]  = max_riders
-            data["potholes_detected"]   = pothole_count
-            data["rider_count"]         = rider_count
+            data["helmet_violations"]  = helmet_violations
+            data["triple_riding"]      = triple_riding
+            data["max_riders_on_bike"] = max_riders
+            data["potholes_detected"]  = pothole_count
+            data["rider_count"]        = rider_count
+
+            # ← NEW: expose plate data cleanly for frontend
+            data["plate_numbers"]      = plate_numbers        # e.g. ["TS 23 B 0770"]
+            data["valid_plates"]       = valid_plates         # only correctly formatted ones
+            data["plates_detected"]    = len(plates)
 
             # Flatten all bounding box detections into one list for the map overlay
             all_detections: list = []
@@ -122,14 +133,23 @@ class ViolationDetector:
                 d.setdefault("class", "pothole")
                 all_detections.append(d)
 
+            # ← NEW: add plate bboxes to detections overlay
+            for p in plates:
+                all_detections.append({
+                    "class":      "license_plate",
+                    "confidence": p.get("confidence", 0),
+                    "bbox":       p.get("bbox", []),
+                    "text":       p.get("plate_number", ""),
+                })
+
             data["detections"] = all_detections
 
             # ── Fetch annotated image ───────────────────────────────────────
-            annotated_image_bytes = image_bytes  # fallback to original
+            annotated_image_bytes = image_bytes
 
             output_url = data.get("output", {}).get("url")
             if output_url:
-                base_url          = settings.MODEL_API_URL.rsplit("/", 1)[0]
+                base_url           = settings.MODEL_API_URL.rsplit("/", 1)[0]
                 full_annotated_url = f"{base_url}{output_url}"
                 logger.info("Fetching annotated image from: %s", full_annotated_url)
                 try:
