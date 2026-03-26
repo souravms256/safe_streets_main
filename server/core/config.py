@@ -26,6 +26,15 @@ class Settings:
 
     # AI Model
     MODEL_API_URL: str = os.getenv("MODEL_API_URL", "http://localhost:8000/detect")
+    CLAUDE_PARALLEL_ENABLED: bool = os.getenv(
+        "CLAUDE_PARALLEL_ENABLED",
+        os.getenv("CLAUDE_FALLBACK_ENABLED", "False"),
+    ).lower() in ("true", "1", "t")
+    ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
+    ANTHROPIC_API_URL: str = os.getenv("ANTHROPIC_API_URL", "https://api.anthropic.com/v1/messages")
+    CLAUDE_MODEL: str = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-20250514")
+    CLAUDE_TIMEOUT_SECONDS: int = int(os.getenv("CLAUDE_TIMEOUT_SECONDS", 45))
+    CLAUDE_MAX_TOKENS: int = int(os.getenv("CLAUDE_MAX_TOKENS", 300))
 
     # SMTP / Email Alerts
     SMTP_HOST: str = os.getenv("SMTP_HOST", "smtp.gmail.com")

@@ -13,7 +13,14 @@ interface ViolationDetails {
     helmet_violations?: number;
     triple_riding?: boolean;
     rider_count?: number;
+    max_riders_on_bike?: number;
+    no_parking?: boolean;
     potholes_detected?: number;
+    plate_numbers?: string[];
+    valid_plates?: string[];
+    plates_detected?: number;
+    detector_source?: string;
+    analysis_summary?: string;
     detections?: Detection[];
     output_image?: string;
     address?: string;
@@ -127,7 +134,9 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                 {/* Mobile Card View (Visible on small screens) */}
                 <div className="block md:hidden">
                     <ul className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {paginatedViolations.map((violation) => (
+                        {paginatedViolations.map((violation, index) => {
+                            const isPriorityImage = currentPage === 1 && startIndex === 0 && index === 0;
+                            return (
                             <li key={violation.id} className="p-4 active:bg-slate-50 dark:active:bg-slate-800/50 transition-colors">
                                 <div className="flex gap-4">
                                     {/* Thumbnail */}
@@ -137,6 +146,7 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                                             alt="Proof"
                                             fill
                                             className="object-cover"
+                                            priority={isPriorityImage}
                                         />
                                     </div>
 
@@ -188,7 +198,8 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                                     </div>
                                 </div>
                             </li>
-                        ))}
+                            );
+                        })}
                     </ul>
                 </div>
 
@@ -218,7 +229,9 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200 bg-white dark:divide-slate-800 dark:bg-slate-900">
-                            {paginatedViolations.map((violation) => (
+                            {paginatedViolations.map((violation, index) => {
+                                const isPriorityImage = currentPage === 1 && startIndex === 0 && index === 0;
+                                return (
                                 <tr key={violation.id}>
                                     <td className="whitespace-nowrap px-6 py-4">
                                         <div className="relative h-16 w-16 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
@@ -227,6 +240,7 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                                                 alt="Proof"
                                                 fill
                                                 className="object-cover"
+                                                priority={isPriorityImage}
                                             />
                                         </div>
                                     </td>
@@ -287,7 +301,8 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                                         </div>
                                     </td>
                                 </tr>
-                            ))}
+                                );
+                            })}
                             {violations.length === 0 && (
                                 <tr>
                                     <td
@@ -377,6 +392,7 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                                     width={800}
                                     height={600}
                                     className="w-full h-auto object-contain bg-slate-100 dark:bg-slate-800"
+                                    priority
                                 />
                             </div>
 
@@ -403,7 +419,19 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                                         AI Analysis Results
                                     </h4>
 
-                                    <div className="grid grid-cols-3 gap-3">
+                                    {selectedViolation.details.detector_source && (
+                                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                                            Source: {
+                                                selectedViolation.details.detector_source === "parallel_ensemble"
+                                                    ? "Primary Model + Claude (Claude-preferred)"
+                                                    : selectedViolation.details.detector_source === "claude_only"
+                                                        ? "Claude Only"
+                                                        : "Primary Model API"
+                                            }
+                                        </p>
+                                    )}
+
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                                         <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg text-center">
                                             <p className="text-2xl font-bold text-red-600 dark:text-red-400">
                                                 {selectedViolation.details.helmet_violations ?? 0}
@@ -422,13 +450,47 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                                             </p>
                                             <p className="text-xs text-blue-500 dark:text-blue-400">Riders Detected</p>
                                         </div>
+                                        <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg text-center">
+                                            <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+                                                {selectedViolation.details.no_parking ? "Yes" : "No"}
+                                            </p>
+                                            <p className="text-xs text-amber-500 dark:text-amber-400">No Parking</p>
+                                        </div>
                                         <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg text-center">
                                             <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
                                                 {selectedViolation.details.potholes_detected ?? 0}
                                             </p>
                                             <p className="text-xs text-indigo-500 dark:text-indigo-400">Potholes Detected</p>
                                         </div>
+                                        <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg text-center">
+                                            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                                                {selectedViolation.details.plates_detected ?? selectedViolation.details.plate_numbers?.length ?? 0}
+                                            </p>
+                                            <p className="text-xs text-emerald-500 dark:text-emerald-400">Plates Read</p>
+                                        </div>
                                     </div>
+
+                                    {selectedViolation.details.plate_numbers && selectedViolation.details.plate_numbers.length > 0 && (
+                                        <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                                            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                                Recognized Number Plates
+                                            </p>
+                                            <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-white tracking-wide">
+                                                {selectedViolation.details.plate_numbers.join(", ")}
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {selectedViolation.details.analysis_summary && (
+                                        <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                                            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
+                                                Analysis Summary
+                                            </p>
+                                            <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                                                {selectedViolation.details.analysis_summary}
+                                            </p>
+                                        </div>
+                                    )}
 
                                     {/* Detections List */}
                                     {selectedViolation.details.detections && selectedViolation.details.detections.length > 0 && (
