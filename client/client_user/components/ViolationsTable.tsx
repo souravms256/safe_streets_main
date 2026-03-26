@@ -427,18 +427,6 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                                         {isCommunityReport ? "Community Report Summary" : "AI Analysis Results"}
                                     </h4>
 
-                                    {selectedViolation.details.detector_source && !isCommunityReport && (
-                                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                                            Source: {
-                                                selectedViolation.details.detector_source === "parallel_ensemble"
-                                                    ? "Primary Model + Claude (Claude-preferred)"
-                                                    : selectedViolation.details.detector_source === "claude_only"
-                                                        ? "Claude Only"
-                                                        : "Primary Model API"
-                                            }
-                                        </p>
-                                    )}
-
                                     {isCommunityReport ? (
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                             <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg text-center">
