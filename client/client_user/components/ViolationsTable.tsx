@@ -135,7 +135,6 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                 <div className="block md:hidden">
                     <ul className="divide-y divide-slate-100 dark:divide-slate-800">
                         {paginatedViolations.map((violation, index) => {
-                            const isPriorityImage = currentPage === 1 && startIndex === 0 && index === 0;
                             return (
                             <li key={violation.id} className="p-4 active:bg-slate-50 dark:active:bg-slate-800/50 transition-colors">
                                 <div className="flex gap-4">
@@ -146,7 +145,7 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                                             alt="Proof"
                                             fill
                                             className="object-cover"
-                                            priority={false}
+                                            priority={currentPage === 1 && startIndex === 0 && index === 0}
                                         />
                                     </div>
 
@@ -230,7 +229,6 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                         </thead>
                         <tbody className="divide-y divide-slate-200 bg-white dark:divide-slate-800 dark:bg-slate-900">
                             {paginatedViolations.map((violation, index) => {
-                                const isPriorityImage = currentPage === 1 && startIndex === 0 && index === 0;
                                 return (
                                 <tr key={violation.id}>
                                     <td className="whitespace-nowrap px-6 py-4">
@@ -240,7 +238,7 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                                                 alt="Proof"
                                                 fill
                                                 className="object-cover"
-                                                priority={isPriorityImage}
+                                                priority={currentPage === 1 && startIndex === 0 && index === 0}
                                             />
                                         </div>
                                     </td>
