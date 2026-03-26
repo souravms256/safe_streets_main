@@ -12,6 +12,18 @@ from utils.logging import get_logger
 
 logger = get_logger("detector")
 
+# Module-level executor reused across requests to avoid per-call thread churn.
+_executor = ThreadPoolExecutor(max_workers=2)
+
+# Maps detected MIME types to filename extensions for consistent multipart uploads.
+_MEDIA_TYPE_TO_EXT: dict[str, str] = {
+    "image/jpeg": "jpg",
+    "image/jpg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+    "image/gif": "gif",
+}
+
 
 class DetectorError(Exception):
     """Base detector error."""
@@ -81,38 +93,37 @@ class ViolationDetector:
         started_at = time.perf_counter()
         timings: dict[str, float] = {}
 
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            primary_submitted_at = time.perf_counter()
-            claude_submitted_at = time.perf_counter()
-            future_map = {
-                executor.submit(
-                    ViolationDetector._detect_with_primary_model,
-                    image_bytes,
-                ): ("primary_model_api", primary_submitted_at),
-                executor.submit(
-                    ViolationDetector._detect_with_claude,
-                    image_bytes,
-                ): ("claude_parallel", claude_submitted_at),
-            }
+        primary_submitted_at = time.perf_counter()
+        claude_submitted_at = time.perf_counter()
+        future_map = {
+            _executor.submit(
+                ViolationDetector._detect_with_primary_model,
+                image_bytes,
+            ): ("primary_model_api", primary_submitted_at),
+            _executor.submit(
+                ViolationDetector._detect_with_claude,
+                image_bytes,
+            ): ("claude_parallel", claude_submitted_at),
+        }
 
-            for future in as_completed(future_map):
-                detector_name, detector_submitted_at = future_map[future]
-                try:
-                    result = future.result()
-                except Exception as exc:
-                    timings[detector_name] = time.perf_counter() - detector_submitted_at
-                    ViolationDetector._log_detector_error(detector_name, exc)
-                    if detector_name == "primary_model_api":
-                        primary_error = exc
-                    else:
-                        claude_error = exc
-                    continue
+        for future in as_completed(future_map):
+            detector_name, detector_submitted_at = future_map[future]
+            try:
+                result = future.result()
+            except Exception as exc:
                 timings[detector_name] = time.perf_counter() - detector_submitted_at
-
+                ViolationDetector._log_detector_error(detector_name, exc)
                 if detector_name == "primary_model_api":
-                    primary_result = result
+                    primary_error = exc
                 else:
-                    claude_result = result
+                    claude_error = exc
+                continue
+            timings[detector_name] = time.perf_counter() - detector_submitted_at
+
+            if detector_name == "primary_model_api":
+                primary_result = result
+            else:
+                claude_result = result
 
         if primary_result and claude_result:
             merged_result = ViolationDetector._merge_detector_results(
@@ -163,11 +174,15 @@ class ViolationDetector:
 
     @staticmethod
     def _detect_with_primary_model(image_bytes: bytes) -> tuple[str, dict, bytes]:
+        media_type = ViolationDetector._detect_media_type(image_bytes)
+        # Default to 'jpg' for any unrecognised media type as JPEG is the most
+        # common format sent by mobile clients and is safe for model servers.
+        ext = _MEDIA_TYPE_TO_EXT.get(media_type, "jpg")
         files = {
             "file": (
-                "image.jpg",
+                f"image.{ext}",
                 image_bytes,
-                ViolationDetector._detect_media_type(image_bytes),
+                media_type,
             )
         }
         response = requests.post(settings.MODEL_API_URL, files=files, timeout=60)

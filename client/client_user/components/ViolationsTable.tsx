@@ -146,7 +146,7 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                                             alt="Proof"
                                             fill
                                             className="object-cover"
-                                            priority={isPriorityImage}
+                                            priority={false}
                                         />
                                     </div>
 
