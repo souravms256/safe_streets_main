@@ -550,7 +550,10 @@ def delete_user(user_id: str, admin=Depends(get_current_admin)):
         if not user.data:
             raise HTTPException(status_code=404, detail="User not found")
 
-        # Delete related violations first (or rely on cascade if configured, but explicit is safer here)
+        # Remove dependent rows explicitly so this works whether or not the DB uses ON DELETE CASCADE.
+        supabase.table("auth_logs").delete().eq("user_id", user_id).execute()
+        supabase.table("notifications").delete().eq("user_id", user_id).execute()
+        supabase.table("refresh_tokens").delete().eq("user_id", user_id).execute()
         supabase.table("violations").delete().eq("user_id", user_id).execute()
 
         # Delete profile
@@ -560,5 +563,7 @@ def delete_user(user_id: str, admin=Depends(get_current_admin)):
         # Since we are using a 'profiles' table wrapper, we delete that.
 
         return {"message": "User deleted successfully"}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
