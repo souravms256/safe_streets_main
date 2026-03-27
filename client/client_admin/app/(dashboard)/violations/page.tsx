@@ -94,7 +94,10 @@ export default function ViolationsPage() {
 
     // Filter Logic
     const filteredViolations = violations.filter(v => {
-        const matchesStatus = filterStatus === "All" || v.status === filterStatus;
+        const matchesStatus =
+            filterStatus === "All" ||
+            v.status === filterStatus ||
+            (filterStatus === "Under Review" && (!v.status || v.status === "Pending"));
         const searchLower = searchQuery.toLowerCase();
         const matchesSearch =
             v.violation_type.toLowerCase().includes(searchLower) ||
