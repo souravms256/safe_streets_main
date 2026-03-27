@@ -14,6 +14,7 @@ class UserProfile(BaseModel):
     points: int
 
 class LeaderboardUser(BaseModel):
+    id: str
     full_name: str
     points: int
 
@@ -44,8 +45,7 @@ def get_leaderboard(current_user=Depends(get_current_user)):
     """
     Get top 10 users by points.
     """
-    # Note: 'points' column must exist
     users = supabase.table("profiles").select(
-        "full_name, points"
+        "id, full_name, points"
     ).order("points", desc=True).limit(10).execute().data
     return users
