@@ -309,7 +309,7 @@ export default function ReportPage() {
                                             : "border-slate-200 bg-white hover:border-emerald-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-emerald-700"
                                     }`}
                                 >
-                                    <p className="text-sm font-semibold text-slate-900 dark:text-white">Garbage Community Issue</p>
+                                    <p className="text-sm font-semibold text-slate-900 dark:text-white">Community Issue</p>
                                     <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
                                         Upload a garbage image, skip AI, and tag it directly as a community-related issue.
                                     </p>
@@ -466,16 +466,7 @@ export default function ReportPage() {
                                 {isCommunityGarbageReport ? "Community Issue Details" : "Violation Details"}
                             </h3>
 
-                            {isCommunityGarbageReport ? (
-                                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900/60 dark:bg-emerald-950/30">
-                                    <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
-                                        This report will be tagged as a community-related garbage issue.
-                                    </p>
-                                    <p className="mt-1 text-xs text-emerald-700/80 dark:text-emerald-300/80">
-                                        No AI detection will run for this image.
-                                    </p>
-                                </div>
-                            ) : (
+                            {!isCommunityGarbageReport && (
                                 <div>
                                     <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
                                         Type of Violation
