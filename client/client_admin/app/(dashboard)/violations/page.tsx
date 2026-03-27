@@ -59,6 +59,12 @@ export default function ViolationsPage() {
     const [reviewViolation, setReviewViolation] = useState<Violation | null>(null);
     const [adminComment, setAdminComment] = useState("");
     const rowsPerPage = 10;
+    const statusFilters = [
+        { label: "All", value: "All" },
+        { label: "Pending", value: "Under Review" },
+        { label: "Verified", value: "Verified" },
+        { label: "Rejected", value: "Rejected" },
+    ] as const;
     const isCommunityReview =
         reviewViolation?.details?.report_mode === "community_garbage" ||
         reviewViolation?.details?.detector_source === "user_reported";
@@ -88,7 +94,10 @@ export default function ViolationsPage() {
 
     // Filter Logic
     const filteredViolations = violations.filter(v => {
-        const matchesStatus = filterStatus === "All" || v.status === filterStatus;
+        const matchesStatus =
+            filterStatus === "All" ||
+            v.status === filterStatus ||
+            (filterStatus === "Under Review" && (!v.status || v.status === "Pending"));
         const searchLower = searchQuery.toLowerCase();
         const matchesSearch =
             v.violation_type.toLowerCase().includes(searchLower) ||
@@ -216,18 +225,18 @@ export default function ViolationsPage() {
             {/* Filters Bar */}
             <div className="flex flex-col md:flex-row gap-4 justify-between items-center premium-card p-2 rounded-xl">
                 <div className="flex gap-1 overflow-x-auto w-full md:w-auto p-1">
-                    {["All", "Pending", "Verified", "Rejected"].map((status) => (
+                    {statusFilters.map((status) => (
                         <button
-                            key={status}
-                            onClick={() => setFilterStatus(status)}
+                            key={status.value}
+                            onClick={() => setFilterStatus(status.value)}
                             className={cn(
                                 "px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
-                                filterStatus === status
+                                filterStatus === status.value
                                     ? "bg-white/10 text-white shadow-sm ring-1 ring-white/10"
                                     : "text-gray-400 hover:text-white hover:bg-white/5"
                             )}
                         >
-                            {status}
+                            {status.label}
                         </button>
                     ))}
                 </div>

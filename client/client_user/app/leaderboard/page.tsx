@@ -148,9 +148,10 @@ export default function LeaderboardPage() {
                         <div className="space-y-2">
                             {leaders.map((leader, index) => {
                                 const isCurrent = isCurrentUser(leader.id);
+                                const leaderKey = leader.id ? `${leader.id}-${index}` : `${leader.full_name}-${index}`;
                                 return (
                                     <motion.div
-                                        key={leader.id}
+                                        key={leaderKey}
                                         initial={{ opacity: 0, x: -20 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: index * 0.05 }}

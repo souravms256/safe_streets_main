@@ -25,7 +25,7 @@ interface UserProfile {
     full_name: string;
     email: string;
     role: string;
-    date_of_birth: string;
+    dob?: string | null;
     created_at: string;
     points?: number;
 }
@@ -222,8 +222,8 @@ export default function ProfilePage() {
                             <div>
                                 <p className="text-xs text-slate-500">Date of Birth</p>
                                 <p className="text-sm font-medium text-slate-900 dark:text-white">
-                                    {user?.date_of_birth
-                                        ? new Date(user.date_of_birth).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" })
+                                    {user?.dob
+                                        ? new Date(user.dob).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" })
                                         : "Not set"}
                                 </p>
                             </div>
