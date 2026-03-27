@@ -10,6 +10,7 @@ import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { DashboardSkeleton } from "@/components/ui/Skeleton";
 import PullToRefresh from "@/components/PullToRefresh";
+import { readCachedValue, writeCachedValue } from "@/services/clientCache";
 import {
     FileText,
     CheckCircle2,
@@ -32,6 +33,8 @@ interface Violation {
     timestamp: string;
     created_at: string;
 }
+
+const DASHBOARD_CACHE_MAX_AGE_MS = 5 * 60 * 1000;
 
 const container = {
     hidden: { opacity: 0 },
@@ -75,17 +78,44 @@ export default function DashboardPage() {
     const [violations, setViolations] = React.useState<Violation[]>([]);
     const [loading, setLoading] = React.useState(true);
 
-    const fetchData = React.useCallback(async () => {
-        const [userRes, violationsRes] = await Promise.all([
+    const fetchData = React.useCallback(async (options?: { background?: boolean }) => {
+        const [userResult, violationsResult] = await Promise.allSettled([
             api.get("/users/me"),
             api.get("/violations/")
         ]);
-        setUser(userRes.data);
-        setViolations(violationsRes.data);
+
+        if (userResult.status === "fulfilled") {
+            setUser(userResult.value.data);
+            writeCachedValue("dashboard:user", userResult.value.data);
+        }
+
+        if (violationsResult.status === "fulfilled") {
+            setViolations(violationsResult.value.data);
+            writeCachedValue("dashboard:violations", violationsResult.value.data);
+        }
+
+        if (userResult.status === "rejected" && violationsResult.status === "rejected" && !options?.background) {
+            throw userResult.reason;
+        }
     }, []);
 
     React.useEffect(() => {
-        fetchData()
+        const cachedUser = readCachedValue<{ full_name: string; role: string; points?: number }>("dashboard:user", DASHBOARD_CACHE_MAX_AGE_MS);
+        const cachedViolations = readCachedValue<Violation[]>("dashboard:violations", DASHBOARD_CACHE_MAX_AGE_MS);
+
+        if (cachedUser) {
+            setUser(cachedUser);
+        }
+
+        if (cachedViolations) {
+            setViolations(cachedViolations);
+        }
+
+        if (cachedUser || cachedViolations) {
+            setLoading(false);
+        }
+
+        fetchData({ background: cachedUser || cachedViolations ? true : false })
             .catch((err) => console.error("Failed to fetch dashboard data:", err))
             .finally(() => setLoading(false));
     }, [fetchData]);
@@ -161,6 +191,12 @@ export default function DashboardPage() {
                             <p className="text-sm text-slate-700 dark:text-slate-300">
                                 Welcome back, <span className="font-semibold text-blue-900 dark:text-blue-200">{user?.full_name || "User"}</span>
                             </p>
+                            <Link href="/pending" className="mt-3 inline-flex">
+                                <Button variant="outline" size="sm" className="gap-2">
+                                    <Clock className="w-4 h-4" />
+                                    Pending Uploads
+                                </Button>
+                            </Link>
                         </div>
                         <Link href="/scan" className="hidden sm:block">
                             <Button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white gap-2 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-blue-500/20">

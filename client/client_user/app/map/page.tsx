@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { startTransition, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import api from "@/services/api";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,6 +19,7 @@ import {
 import { EmptyState } from "@/components/EmptyState";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
+import { readCachedValue, writeCachedValue } from "@/services/clientCache";
 
 interface Violation {
     id: string;
@@ -38,6 +39,8 @@ interface User {
     email: string;
     role: string;
 }
+
+const MAP_CACHE_MAX_AGE_MS = 5 * 60 * 1000;
 
 // Dynamically import Map component for SSR
 const Map = dynamic(() => import("@/components/Map"), {
@@ -72,19 +75,43 @@ export default function MapPage() {
             return;
         }
 
-        Promise.all([
+        const cachedUser = readCachedValue<User>("map:user", MAP_CACHE_MAX_AGE_MS);
+        const cachedViolations = readCachedValue<Violation[]>("map:violations-public", MAP_CACHE_MAX_AGE_MS);
+
+        if (cachedUser) {
+            setUser(cachedUser);
+        }
+
+        if (cachedViolations) {
+            setAllViolations(cachedViolations);
+            setFilteredViolations(cachedViolations);
+            setLoading(false);
+        }
+
+        Promise.allSettled([
             api.get("/users/me"),
             api.get("/violations/public")
         ]).then(([userRes, violationsRes]) => {
-            setUser(userRes.data);
-            setAllViolations(violationsRes.data);
-            setFilteredViolations(violationsRes.data);
-        })
-            .catch((err) => {
-                console.error("Failed to fetch map data:", err);
-                if (err.response?.status === 401) router.push("/login");
-            })
-            .finally(() => setLoading(false));
+            if (userRes.status === "fulfilled") {
+                setUser(userRes.value.data);
+                writeCachedValue("map:user", userRes.value.data);
+            }
+
+            if (violationsRes.status === "fulfilled") {
+                setAllViolations(violationsRes.value.data);
+                setFilteredViolations(violationsRes.value.data);
+                writeCachedValue("map:violations-public", violationsRes.value.data);
+            }
+
+            if (userRes.status === "rejected" && violationsRes.status === "rejected") {
+                console.error("Failed to fetch map data:", userRes.reason);
+                if (userRes.reason?.response?.status === 401 || violationsRes.reason?.response?.status === 401) {
+                    startTransition(() => {
+                        router.push("/login");
+                    });
+                }
+            }
+        }).finally(() => setLoading(false));
     }, [router]);
 
     // Filter logic
@@ -123,7 +150,7 @@ export default function MapPage() {
         }
     };
 
-    const violationTypes = ["All", "Helmet Violation", "Triple Riding", "No Parking", "Pothole", "Community", "No Violation"];
+    const violationTypes = useMemo(() => ["All", "Helmet Violation", "Triple Riding", "No Parking", "Pothole", "Community", "No Violation"], []);
 
     // Filter panel content (shared between desktop sidebar and mobile bottom sheet)
     const FilterContent = () => (

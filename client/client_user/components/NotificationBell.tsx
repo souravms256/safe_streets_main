@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { startTransition, useEffect, useRef, useState } from "react";
 import { Bell, CheckCircle2, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import api from "@/services/api";
+import { isLoggedInClient } from "@/services/appShell";
 
 interface Notification {
     id: string;
@@ -23,8 +24,14 @@ const NotificationBell = () => {
 
     const unreadCount = notifications.filter((n) => !n.is_read).length;
     const previewNotifications = notifications.slice(0, 3);
+    const hasLoadedRef = useRef(false);
 
     const fetchNotifications = async () => {
+        if (!isLoggedInClient()) {
+            setNotifications([]);
+            return;
+        }
+
         try {
             const res = await api.get("/notifications");
             setNotifications(res.data);
@@ -34,11 +41,60 @@ const NotificationBell = () => {
     };
 
     useEffect(() => {
-        fetchNotifications();
-        // Poll every 15 seconds for new notifications
-        const interval = setInterval(fetchNotifications, 15000);
-        return () => clearInterval(interval);
+        let interval: ReturnType<typeof setInterval> | null = null;
+        let initialTimer: ReturnType<typeof setTimeout> | null = null;
+
+        const loadNotifications = () => {
+            hasLoadedRef.current = true;
+            void fetchNotifications();
+        };
+
+        const startPolling = () => {
+            if (interval || document.hidden || !isLoggedInClient()) {
+                return;
+            }
+
+            interval = setInterval(loadNotifications, 120000);
+        };
+
+        const stopPolling = () => {
+            if (interval) {
+                clearInterval(interval);
+                interval = null;
+            }
+        };
+
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                stopPolling();
+                return;
+            }
+
+            loadNotifications();
+            startPolling();
+        };
+
+        initialTimer = setTimeout(() => {
+            loadNotifications();
+            startPolling();
+        }, 1200);
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+
+        return () => {
+            if (initialTimer) {
+                clearTimeout(initialTimer);
+            }
+            stopPolling();
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+        };
     }, []);
+
+    useEffect(() => {
+        if (isOpen && !hasLoadedRef.current) {
+            hasLoadedRef.current = true;
+            void fetchNotifications();
+        }
+    }, [isOpen]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -156,7 +212,9 @@ const NotificationBell = () => {
                                 <button
                                     onClick={() => {
                                         setIsOpen(false);
-                                        router.push("/notifications");
+                                        startTransition(() => {
+                                            router.push("/notifications");
+                                        });
                                     }}
                                     className="w-full rounded-lg py-2 text-center text-[10px] font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                                 >

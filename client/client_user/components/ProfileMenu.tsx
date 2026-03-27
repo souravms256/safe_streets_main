@@ -11,6 +11,7 @@ import {
     ChevronDown
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { emitAuthChange } from "@/services/appShell";
 
 interface ProfileMenuProps {
     user: {
@@ -41,6 +42,7 @@ export default function ProfileMenu({ user }: ProfileMenuProps) {
         Cookies.remove("refresh_token");
         localStorage.removeItem("access_token");
         localStorage.removeItem("refresh_token");
+        emitAuthChange();
         window.location.href = "/login";
     };
 

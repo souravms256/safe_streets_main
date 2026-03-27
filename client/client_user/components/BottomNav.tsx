@@ -1,38 +1,51 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { FileText, Home, Map, User } from "lucide-react";
-import { motion } from "framer-motion";
+import { APP_ROUTES, AUTH_CHANGE_EVENT, isLoggedInClient } from "@/services/appShell";
 
 export default function BottomNav() {
     const pathname = usePathname();
+    const router = useRouter();
     const [isLoggedIn, setIsLoggedIn] = useState(false);
 
     useEffect(() => {
-        const token =
-            typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-        setIsLoggedIn(!!token);
-    }, [pathname]);
+        const syncAuthState = () => setIsLoggedIn(isLoggedInClient());
+
+        syncAuthState();
+        window.addEventListener("storage", syncAuthState);
+        window.addEventListener(AUTH_CHANGE_EVENT, syncAuthState);
+
+        return () => {
+            window.removeEventListener("storage", syncAuthState);
+            window.removeEventListener(AUTH_CHANGE_EVENT, syncAuthState);
+        };
+    }, []);
+
+    useEffect(() => {
+        APP_ROUTES.forEach((route) => {
+            if (route !== pathname) {
+                router.prefetch(route);
+            }
+        });
+    }, [pathname, router]);
+
+    const navItems = useMemo(() => [
+        { name: "Home", href: "/dashboard", icon: Home },
+        { name: "Map", href: "/map", icon: Map },
+        { name: "Report", href: "/report", icon: FileText },
+        { name: "Profile", href: "/profile", icon: User },
+    ], []);
 
     if (!isLoggedIn) return null;
     if (pathname === "/login" || pathname === "/register") return null;
 
     const isActive = (path: string) => pathname === path;
 
-    const navItems = [
-        { name: "Home", href: "/dashboard", icon: Home },
-        { name: "Map", href: "/map", icon: Map },
-        { name: "Report", href: "/report", icon: FileText },
-        { name: "Profile", href: "/profile", icon: User },
-    ];
-
     return (
-        <motion.nav
-            initial={{ y: 100 }}
-            animate={{ y: 0 }}
-            transition={{ type: "spring", stiffness: 260, damping: 20 }}
+        <nav
             className="fixed bottom-0 left-0 right-0 z-[3000] block md:hidden"
         >
             <div
@@ -68,18 +81,12 @@ export default function BottomNav() {
                                 >
                                     {item.name}
                                 </span>
-                                {active && (
-                                    <motion.span
-                                        layoutId="bottomNavIndicator"
-                                        className="absolute bottom-0 h-1 w-1 rounded-full bg-blue-600 dark:bg-blue-500"
-                                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                                    />
-                                )}
+                                {active && <span className="absolute bottom-0 h-1 w-1 rounded-full bg-blue-600 dark:bg-blue-500" />}
                             </Link>
                         );
                     })}
                 </div>
             </div>
-        </motion.nav>
+        </nav>
     );
 }

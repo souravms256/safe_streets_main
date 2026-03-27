@@ -1,7 +1,9 @@
 import axios from "axios";
+import { emitAuthChange } from "./appShell";
 
 const api = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000",
+    baseURL: process.env.NEXT_PUBLIC_API_URL || "https://safe-streets-main-vkm4.onrender.com",
+    timeout: 20000,
     headers: {
         "Content-Type": "application/json",
     },
@@ -23,6 +25,7 @@ api.interceptors.response.use(
         if (error.response?.status === 401) {
             localStorage.removeItem("access_token");
             localStorage.removeItem("refresh_token");
+            emitAuthChange();
             window.location.href = "/login";
         }
         return Promise.reject(error);

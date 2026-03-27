@@ -1,0 +1,19 @@
+   ▲ Next.js 15.1.11
+   - Environments: .env
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+Failed to compile.
+
+./app/report/page.tsx:260:21
+Type error: Object literal may only specify known properties, and 'preserveAspectRatio' does not exist in type 'ImageOptions'.
+
+[0m [90m 258 |[39m                     width[33m:[39m [35m1920[39m[33m,[39m[0m
+[0m [90m 259 |[39m                     height[33m:[39m [35m1920[39m[33m,[39m[0m
+[0m[31m[1m>[22m[39m[90m 260 |[39m                     preserveAspectRatio[33m:[39m [36mtrue[39m[33m,[39m[0m
+[0m [90m     |[39m                     [31m[1m^[22m[39m[0m
+[0m [90m 261 |[39m                 })[33m;[39m[0m
+[0m [90m 262 |[39m[0m
+[0m [90m 263 |[39m                 [36mconst[39m fmt [33m=[39m (photo[33m.[39mformat [33m||[39m [32m"jpeg"[39m)[33m.[39mreplace([32m"jpg"[39m[33m,[39m [32m"jpeg"[39m)[33m;[39m[0m
+Next.js build worker exited with code: 1 and signal: null
