@@ -70,7 +70,7 @@ const Navbar = () => {
             initial={{ y: -100 }}
             animate={{ y: 0 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="fixed top-0 left-0 right-0 z-[2000] border-b border-slate-200/50 bg-white/80 backdrop-blur-xl pt-[env(safe-area-inset-top)] dark:border-slate-800/50 dark:bg-slate-950/80"
+            className="fixed top-0 left-0 right-0 z-[2000] border-b border-slate-200/80 bg-white pt-[env(safe-area-inset-top)] dark:border-slate-800/80 dark:bg-slate-950"
         >
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div className="flex h-16 md:h-20 items-center justify-between">
@@ -85,7 +85,7 @@ const Navbar = () => {
 
                     {/* Desktop Nav */}
                     <div className="hidden md:block absolute left-1/2 -translate-x-1/2">
-                        <div className="flex items-center space-x-2 bg-slate-50/50 dark:bg-slate-900/50 border border-slate-200/50 dark:border-slate-800/50 rounded-full px-2 py-1.5 backdrop-blur-md">
+                        <div className="flex items-center space-x-2 bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-full px-2 py-1.5">
                             {activeLinks.map((link) => (
                                 <Link
                                     key={link.name}
@@ -155,7 +155,7 @@ const Navbar = () => {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             transition={{ duration: 0.2 }}
-                            className="fixed inset-0 z-[1900] bg-slate-900/20 backdrop-blur-sm dark:bg-black/40 md:hidden"
+                            className="fixed inset-0 z-[1900] bg-slate-900/80 dark:bg-black/80 md:hidden"
                             onClick={() => setIsOpen(false)}
                             aria-hidden="true"
                         />
@@ -164,7 +164,7 @@ const Navbar = () => {
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: -10 }}
                             transition={{ duration: 0.25, type: "spring", stiffness: 300, damping: 25 }}
-                            className="absolute left-3 right-3 top-[calc(100%+0.5rem)] z-[2000] md:hidden overflow-hidden rounded-3xl bg-white/95 backdrop-blur-2xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] border border-white/40 dark:bg-slate-900/95 dark:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.6)] dark:border-slate-700/50"
+                            className="absolute left-3 right-3 top-[calc(100%+0.5rem)] z-[2000] md:hidden overflow-hidden rounded-3xl bg-white shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] border border-slate-200 dark:bg-slate-900 dark:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.6)] dark:border-slate-700/80"
                         >
                             <div className="flex flex-col p-3 gap-1">
                                 {activeLinks.map((link, i) => (
