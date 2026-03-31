@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 
 const api = axios.create({
     baseURL: process.env.NEXT_PUBLIC_API_URL || "https://safe-streets-main-vkm4.onrender.com",
@@ -9,6 +9,10 @@ const api = axios.create({
 
 // Add token to requests if available
 api.interceptors.request.use((config) => {
+    if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+        config.headers.setContentType(null);
+    }
+
     const token = localStorage.getItem("access_token");
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -16,10 +20,36 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
+export function getApiErrorMessage(error: unknown): string {
+    const axiosError = error as AxiosError<{ detail?: string }>;
+
+    if (axiosError.response?.data?.detail) {
+        return axiosError.response.data.detail;
+    }
+
+    if (axiosError.code === "ERR_NETWORK" || !axiosError.response) {
+        return "Could not reach the SafeStreets server from this device. Please check your internet connection and API URL.";
+    }
+
+    return axiosError.message || "Request failed. Please try again.";
+}
+
 // Handle 401 errors
 api.interceptors.response.use(
     (response) => response,
     (error) => {
+        const method = error.config?.method?.toUpperCase() || "UNKNOWN";
+        const url = `${error.config?.baseURL || ""}${error.config?.url || ""}`;
+        console.error("[API] Request failed", {
+            method,
+            url,
+            status: error.response?.status,
+            code: error.code,
+            message: error.message,
+            detail: error.response?.data?.detail,
+            correlationId: error.response?.headers?.["x-correlation-id"],
+        });
+
         if (error.response?.status === 401) {
             localStorage.removeItem("access_token");
             localStorage.removeItem("refresh_token");
