@@ -51,6 +51,18 @@ const COMMUNITY_TAG = "Community Related Issue";
 
 type ReportMode = typeof TRAFFIC_MODE | typeof COMMUNITY_MODE;
 
+interface AddressData {
+    display_name: string;
+    short_address: string;
+    road?: string;
+    neighbourhood?: string;
+    suburb?: string;
+    city?: string;
+    state?: string;
+    postcode?: string;
+    country?: string;
+}
+
 // ─── Internal image type ────────────────────────────────────────────────────────
 
 /**
@@ -127,6 +139,8 @@ export default function ReportPage() {
     const [locationError, setLocationError] = useState<string | null>(null);
     const [locLoading, setLocLoading] = useState(false);
     const [addressLabel, setAddressLabel] = useState<string | null>(null);
+    const [addressData, setAddressData] = useState<AddressData | null>(null);
+    const [addressLoading, setAddressLoading] = useState(false);
 
     // UI state
     const [showPicker, setShowPicker] = useState(false);
@@ -156,15 +170,22 @@ export default function ReportPage() {
 
     // ── Geolocation ─────────────────────────────────────────────────────────────
     const reverseGeocode = useCallback(async (lat: number, lng: number) => {
+        setAddressLoading(true);
         try {
             const res = await api.get("/geocode/reverse", {
                 params: { lat, lon: lng },
             });
-            if (res.data?.success && res.data?.data?.short_address) {
-                setAddressLabel(res.data.data.short_address);
+            if (res.data?.success && res.data?.data) {
+                const data = res.data.data;
+                setAddressData(data);
+                if (data.short_address) {
+                    setAddressLabel(data.short_address);
+                }
             }
         } catch {
             // non-fatal
+        } finally {
+            setAddressLoading(false);
         }
     }, []);
 
@@ -388,11 +409,14 @@ export default function ReportPage() {
     const buildFormData = useCallback(async (): Promise<FormData> => {
         const formData = new FormData();
 
-        for (let i = 0; i < images.length; i++) {
-            const img = images[i];
-            const file = await prepareForUpload(img.blob, `photo_${i}.${img.format}`);
+        // Process all images in parallel for lower latency
+        const uploadFiles = await Promise.all(
+            images.map((img, i) => prepareForUpload(img.blob, `photo_${i}.${img.format}`))
+        );
+
+        uploadFiles.forEach((file) => {
             formData.append("files", file);
-        }
+        });
 
         formData.append("latitude", location!.lat.toString());
         formData.append("longitude", location!.lng.toString());
@@ -602,15 +626,20 @@ export default function ReportPage() {
                                 </div>
                                 <div className="flex items-start gap-2 text-xs text-slate-600 dark:text-slate-300">
                                     <MapPin className="h-3.5 w-3.5 shrink-0 text-blue-500 mt-0.5" />
-                                    <span>
-                                        {location
-                                            ? addressLabel
-                                                ? `${addressLabel} (${location.lat.toFixed(5)}, ${location.lng.toFixed(5)})`
-                                                : `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`
-                                            : locLoading
-                                              ? "Detecting location…"
-                                              : "No location — tap Detect below"}
-                                    </span>
+                                    <div className="flex flex-col">
+                                        <span className="font-semibold">
+                                            {location
+                                                ? addressData?.short_address || addressLabel || `${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}`
+                                                : locLoading
+                                                ? "Detecting location…"
+                                                : "No location — tap Detect below"}
+                                        </span>
+                                        {location && (
+                                            <span className="text-[10px] opacity-70">
+                                                {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -721,26 +750,55 @@ export default function ReportPage() {
 
                 {/* ── Location ── */}
                 <div className="overflow-hidden rounded-2xl bg-white shadow-sm dark:bg-slate-900">
-                    <div className="flex items-center justify-between px-4 py-3">
-                        <div className="flex min-w-0 items-center gap-2">
-                            <MapPin className="h-4 w-4 shrink-0 text-blue-500" />
-                            <span className="truncate text-sm text-slate-700 dark:text-slate-300">
-                                {location
-                                    ? addressLabel ||
-                                      `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`
-                                    : "No location detected"}
-                            </span>
+                    <div className="flex flex-col gap-3 p-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex min-w-0 items-center gap-2">
+                                <MapPin className="h-4 w-4 shrink-0 text-blue-500" />
+                                <span className="truncate text-sm font-medium text-slate-700 dark:text-slate-300">
+                                    {location
+                                        ? `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`
+                                        : "No location detected"}
+                                </span>
+                            </div>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                isLoading={locLoading}
+                                onClick={() => void getLocation(false)}
+                                className="shrink-0 text-xs"
+                            >
+                                Detect
+                            </Button>
                         </div>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            isLoading={locLoading}
-                            onClick={() => void getLocation(false)}
-                            className="ml-3 shrink-0 text-xs"
-                        >
-                            Detect
-                        </Button>
+
+                        {addressLoading ? (
+                             <div className="flex items-center gap-2 text-xs text-slate-500">
+                                 <div className="h-3 w-3 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+                                 <span>Resolving address...</span>
+                             </div>
+                        ) : addressData ? (
+                            <div className="space-y-1 rounded-lg border border-slate-100 bg-slate-50/50 p-2.5 dark:border-slate-800 dark:bg-slate-800/50">
+                                <p className="text-xs font-semibold text-slate-900 dark:text-white leading-tight">
+                                    {addressData.short_address}
+                                </p>
+                                <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                                    {addressData.display_name}
+                                </p>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                    {addressData.city && (
+                                        <span className="rounded bg-blue-100 px-1 py-0.5 text-[9px] font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                                            {addressData.city}
+                                        </span>
+                                    )}
+                                    {addressData.state && (
+                                        <span className="rounded bg-purple-100 px-1 py-0.5 text-[9px] font-medium text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">
+                                            {addressData.state}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        ) : null}
                     </div>
                     {locationError && (
                         <div className="border-t border-amber-100 bg-amber-50 px-4 py-2 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">

@@ -49,7 +49,7 @@ export default function BottomNav() {
             className="fixed bottom-0 left-0 right-0 z-[3000] block md:hidden"
         >
             <div
-                className="border-t border-slate-200/80 bg-white/95 px-4 backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-900/95"
+                className="border-t border-slate-200/80 bg-white px-4 dark:border-slate-800/80 dark:bg-slate-900"
                 style={{
                     paddingTop: "10px",
                     paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)",

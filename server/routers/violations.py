@@ -46,6 +46,50 @@ COMMUNITY_GARBAGE_REPORT_MODE = "community_garbage"
 COMMUNITY_GARBAGE_TYPE = "Community Issue - Garbage"
 
 
+def _infer_image_content_type(file: UploadFile, contents: bytes) -> str | None:
+    content_type = (file.content_type or "").strip().lower()
+    if content_type.startswith("image/"):
+        return content_type
+
+    filename = (file.filename or "").lower()
+    if filename.endswith((".jpg", ".jpeg")):
+        return "image/jpeg"
+    if filename.endswith(".png"):
+        return "image/png"
+    if filename.endswith(".webp"):
+        return "image/webp"
+    if filename.endswith(".gif"):
+        return "image/gif"
+
+    if contents.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if contents.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if contents.startswith(b"RIFF") and contents[8:12] == b"WEBP":
+        return "image/webp"
+    if contents.startswith((b"GIF87a", b"GIF89a")):
+        return "image/gif"
+
+    return None
+
+
+def _build_fallback_address_data(latitude: float, longitude: float) -> Dict[str, Any]:
+    coordinate_label = f"{latitude}, {longitude}"
+    return {
+        "display_name": coordinate_label,
+        "short_address": "Location unavailable",
+        "road": "",
+        "neighbourhood": "",
+        "suburb": "",
+        "city": "",
+        "state": "",
+        "postcode": "",
+        "country": "",
+        "latitude": latitude,
+        "longitude": longitude,
+    }
+
+
 @router.post("/", response_model=ReportResponse)
 @limiter.limit("5/minute")
 async def report_violation(
@@ -74,13 +118,16 @@ async def report_violation(
             status_code=400, detail="Maximum 3 images allowed per report"
         )
 
+    violations_logger.info(
+        "Report submission received | user_id=%s | report_mode=%s | files=%s | content_types=%s",
+        current_user.get("user_id", "unknown"),
+        report_mode,
+        [file.filename for file in files],
+        [file.content_type for file in files],
+    )
+
     MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
     for file in files:
-        if not file.content_type.startswith("image/"):
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid file type: {file.filename}. Only images are allowed.",
-            )
         if getattr(file, "size", 0) and file.size > MAX_FILE_SIZE:
             raise HTTPException(
                 status_code=400,
@@ -90,6 +137,19 @@ async def report_violation(
     # 1. Read primary file and determine detection path
     primary_file = files[0]
     contents = await primary_file.read()
+    if len(contents) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File {primary_file.filename} is too large. Max size is 10MB.",
+        )
+
+    primary_content_type = _infer_image_content_type(primary_file, contents)
+    if not primary_content_type:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid file type: {primary_file.filename}. Only images are allowed.",
+        )
+
     is_community_garbage_report = report_mode == COMMUNITY_GARBAGE_REPORT_MODE
 
     if is_community_garbage_report:
@@ -111,7 +171,17 @@ async def report_violation(
         details["report_mode"] = TRAFFIC_REPORT_MODE
 
     # 2. Resolve Address
-    address_data = get_address_detailed(latitude, longitude)
+    try:
+        address_data = get_address_detailed(latitude, longitude)
+    except Exception as exc:
+        violations_logger.warning(
+            "Address resolution failed; continuing with coordinates only | lat=%s | lon=%s | error=%s",
+            latitude,
+            longitude,
+            exc,
+        )
+        address_data = _build_fallback_address_data(latitude, longitude)
+
     address = address_data["display_name"]
     short_address = address_data["short_address"]
 
@@ -124,7 +194,7 @@ async def report_violation(
         supabase.storage.from_(BUCKET_NAME).upload(
             path=display_file_name,
             file=annotated_bytes,
-            file_options={"content-type": primary_file.content_type},
+            file_options={"content-type": primary_content_type},
         )
         public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(display_file_name)
     except Exception as e:
@@ -144,7 +214,7 @@ async def report_violation(
             supabase.storage.from_(BUCKET_NAME).upload(
                 path=original_file_name,
                 file=contents,
-                file_options={"content-type": primary_file.content_type},
+                file_options={"content-type": primary_content_type},
             )
             original_url = supabase.storage.from_(BUCKET_NAME).get_public_url(
                 original_file_name
@@ -158,16 +228,31 @@ async def report_violation(
     for extra_file in files[1:]:
         try:
             extra_contents = await extra_file.read()
+            if len(extra_contents) > MAX_FILE_SIZE:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"File {extra_file.filename} is too large. Max size is 10MB.",
+                )
+
+            extra_content_type = _infer_image_content_type(extra_file, extra_contents)
+            if not extra_content_type:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid file type: {extra_file.filename}. Only images are allowed.",
+                )
+
             ext = extra_file.filename.split(".")[-1] if extra_file.filename else "jpg"
             extra_name = f"{current_user['user_id']}/{uuid.uuid4()}.{ext}"
             supabase.storage.from_(BUCKET_NAME).upload(
                 path=extra_name,
                 file=extra_contents,
-                file_options={"content-type": extra_file.content_type},
+                file_options={"content-type": extra_content_type},
             )
             additional_urls.append(
                 supabase.storage.from_(BUCKET_NAME).get_public_url(extra_name)
             )
+        except HTTPException:
+            raise
         except Exception as e:
             violations_logger.warning("Additional image upload failed (non-fatal): %s", e)
 
