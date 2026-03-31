@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import api from "@/services/api";
+import api, { getApiErrorMessage } from "@/services/api";
 import { Button } from "@/components/ui/Button";
 import toast from "react-hot-toast";
 import { compressImage, needsCompression, blobToFile } from "@/services/imageCompression";
@@ -229,7 +229,11 @@ export default function ReportPage() {
                     console.warn("Compression failed, using original:", err);
                 }
             }
-            formData.append("files", uploadFile);
+            formData.append(
+                "files",
+                uploadFile,
+                uploadFile instanceof File ? uploadFile.name : f.name
+            );
         }
         formData.append("latitude", location.lat.toString());
         formData.append("longitude", location.lng.toString());
@@ -249,9 +253,7 @@ export default function ReportPage() {
         }
 
         try {
-            const response = await api.post("/violations/", formData, {
-                headers: { "Content-Type": "multipart/form-data" },
-            });
+            const response = await api.post("/violations/", formData);
             const { detected_type } = response.data;
             if (isCommunityGarbageReport) {
                 toast.success("Report submitted! Thanks for tagging this as a community garbage issue.");
@@ -260,8 +262,15 @@ export default function ReportPage() {
             }
             router.push("/dashboard");
         } catch (error) {
-            console.error("Submission failed:", error);
-            toast.error("Failed to submit report. Please try again.");
+            const message = getApiErrorMessage(error);
+            console.error("Submission failed:", {
+                error,
+                message,
+                reportMode,
+                fileCount: files.length,
+                location,
+            });
+            toast.error(message);
         } finally {
             setAnalyzing(false);
         }
