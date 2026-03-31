@@ -23,7 +23,7 @@ import React, {
 } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import api from "@/services/api";
+import api, { UPLOAD_TIMEOUT_MS } from "@/services/api";
 import { Button } from "@/components/ui/Button";
 import toast from "react-hot-toast";
 import { compressImage, needsCompression, blobToFile } from "@/services/imageCompression";
@@ -456,7 +456,8 @@ export default function ReportPage() {
             const formData = await buildFormData();
             // POST to backend → AI model detection (same as original flow)
             const response = await api.post("/violations/", formData, {
-                headers: { "Content-Type": "multipart/form-data" },
+                headers: { "Content-Type": undefined }, // Let Axios/browser set multipart boundary automatically
+                timeout: UPLOAD_TIMEOUT_MS, // 90 s — AI inference + Supabase upload can be slow
             });
 
             const { detected_type } = response.data;
