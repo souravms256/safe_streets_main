@@ -38,6 +38,10 @@ class DeleteResponse(BaseModel):
     message: str
 
 
+class ViolationCountResponse(BaseModel):
+    count: int
+
+
 router = APIRouter(prefix="/violations", tags=["Violations"])
 
 BUCKET_NAME = "violation-evidence"
@@ -367,6 +371,23 @@ def get_my_violations(current_user: dict = Depends(get_current_user)):
             .execute()
         )
         return response.data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/count", response_model=ViolationCountResponse)
+def get_my_violations_count(current_user: dict = Depends(get_current_user)):
+    """
+    Fetch only the current user's total violation count.
+    """
+    try:
+        response = (
+            supabase.table("violations")
+            .select("id", count="exact", head=True)
+            .eq("user_id", current_user["user_id"])
+            .execute()
+        )
+        return {"count": response.count or 0}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

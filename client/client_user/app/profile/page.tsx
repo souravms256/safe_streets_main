@@ -43,10 +43,16 @@ export default function ProfilePage() {
             return;
         }
 
-        // Fetch profile and user's report count
-        Promise.all([api.get("/users/me"), api.get("/violations/")])
+        // Fetch profile and user's report count (use lightweight count endpoint)
+        Promise.all([api.get("/users/me"), api.get("/violations/count")])
             .then(([userRes, reportsRes]) => {
-                const reportsCount = Array.isArray(reportsRes.data) ? reportsRes.data.length : 0;
+                const reportsData = reportsRes.data;
+                const reportsCount =
+                    typeof reportsData?.count === "number"
+                        ? reportsData.count
+                        : Array.isArray(reportsData)
+                            ? reportsData.length
+                            : 0;
                 setUser({ ...userRes.data, points: userRes.data.points ?? 0, reportsCount });
             })
             .catch((err) => {
