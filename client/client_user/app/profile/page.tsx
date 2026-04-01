@@ -31,35 +31,75 @@ interface UserProfile {
     reportsCount?: number;
 }
 
+function extractReportsCount(data: unknown): number {
+    if (
+        typeof data === "object" &&
+        data !== null &&
+        "count" in data &&
+        typeof (data as { count?: unknown }).count === "number"
+    ) {
+        return (data as { count: number }).count;
+    }
+
+    return Array.isArray(data) ? data.length : 0;
+}
+
 export default function ProfilePage() {
     const [user, setUser] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
 
     useEffect(() => {
+        let isCancelled = false;
         const token = localStorage.getItem("access_token");
         if (!token) {
             router.push(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
             return;
         }
 
-        // Fetch profile and user's report count (use lightweight count endpoint)
-        Promise.all([api.get("/users/me"), api.get("/violations/count")])
-            .then(([userRes, reportsRes]) => {
-                const reportsData = reportsRes.data;
-                const reportsCount =
-                    typeof reportsData?.count === "number"
-                        ? reportsData.count
-                        : Array.isArray(reportsData)
-                            ? reportsData.length
-                            : 0;
-                setUser({ ...userRes.data, points: userRes.data.points ?? 0, reportsCount });
-            })
-            .catch((err) => {
+        const loadProfile = async () => {
+            try {
+                const userRes = await api.get("/users/me");
+                let reportsCount = 0;
+
+                try {
+                    const reportsRes = await api.get("/violations/count");
+                    reportsCount = extractReportsCount(reportsRes.data);
+                } catch (countError) {
+                    console.warn("Failed to fetch report count. Falling back to reports list.", countError);
+                    try {
+                        const reportsRes = await api.get("/violations/");
+                        reportsCount = extractReportsCount(reportsRes.data);
+                    } catch (reportsError) {
+                        console.warn("Failed to fetch reports fallback for profile.", reportsError);
+                    }
+                }
+
+                if (!isCancelled) {
+                    setUser({ ...userRes.data, points: userRes.data.points ?? 0, reportsCount });
+                }
+            } catch (err) {
                 console.error("Failed to fetch profile:", err);
-                if (err.response?.status === 401) router.push(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
-            })
-            .finally(() => setLoading(false));
+                const status =
+                    typeof err === "object" && err !== null && "response" in err
+                        ? (err as { response?: { status?: number } }).response?.status
+                        : undefined;
+
+                if (status === 401) {
+                    router.push(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+                }
+            } finally {
+                if (!isCancelled) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        void loadProfile();
+
+        return () => {
+            isCancelled = true;
+        };
     }, [router]);
 
     const handleLogout = async () => {
