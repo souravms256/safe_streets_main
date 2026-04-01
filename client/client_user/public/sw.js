@@ -103,6 +103,12 @@ self.addEventListener('sync', (event) => {
 async function syncViolations() {
     console.log('[SW] Syncing pending violations...');
     try {
+        const token = await getStoredToken();
+        if (!token) {
+            console.warn('[SW] No stored auth token available; skipping background sync');
+            return;
+        }
+
         // Get all pending reports from IndexedDB
         const db = await openDB();
         const reports = await getAllPendingReports(db);
@@ -150,7 +156,7 @@ async function syncViolations() {
                     method: 'POST',
                     body: formData,
                     headers: {
-                        'Authorization': `Bearer ${await getStoredToken()}`
+                        'Authorization': `Bearer ${token}`
                     }
                 });
                 

@@ -29,6 +29,7 @@ const Navbar = () => {
 
     const handleLogout = async () => {
         localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
         try {
             const { removeAuthToken } = await import('@/services/offlineQueue');
             await removeAuthToken();

@@ -290,12 +290,12 @@ export default function PendingReportsPage() {
                       
                       {report.formData.vehicle_number && (
                         <p className="text-slate-600 dark:text-slate-400">
-                          � Vehicle: <span className="font-mono font-medium">{report.formData.vehicle_number}</span>
+                          Vehicle: <span className="font-mono font-medium">{report.formData.vehicle_number}</span>
                         </p>
                       )}
                       
                       <p className="text-slate-500 dark:text-slate-500">
-                        �📷 {report.formData.imageUrls?.length || 0} image(s)
+                        Photos: {report.formData.imageUrls?.length || 0} image(s)
                       </p>
                     </div>
 

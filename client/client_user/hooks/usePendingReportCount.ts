@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getPendingReportCount } from "@/services/offlineSync";
+import { getPendingReportCount } from "@/services/offlineQueue";
 
 export function usePendingReportCount() {
   const [count, setCount] = useState(0);

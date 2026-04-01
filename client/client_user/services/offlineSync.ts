@@ -179,9 +179,9 @@ export async function hasPendingReports(): Promise<boolean> {
 }
 
 /**
- * Get count of pending reports
+ * Get count of reports that are immediately eligible for sync
  */
-export async function getPendingReportCount(): Promise<number> {
+export async function getSyncReadyReportCount(): Promise<number> {
   const pending = await getPendingReportsByStatus('pending');
   return pending.length;
 }

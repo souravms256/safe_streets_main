@@ -60,6 +60,20 @@ function getBrowserGeolocationMessage(error: GeolocationPositionError) {
     return "Unable to retrieve location.";
 }
 
+function buildCapturedImageFile(blob: Blob, fallbackBaseName: string): File {
+    const mimeType = blob.type || "image/jpeg";
+    const extension =
+        mimeType === "image/png"
+            ? "png"
+            : mimeType === "image/webp"
+                ? "webp"
+                : mimeType === "image/gif"
+                    ? "gif"
+                    : "jpg";
+
+    return new File([blob], `${fallbackBaseName}.${extension}`, { type: mimeType });
+}
+
 export default function ReportPage() {
     const router = useRouter();
     const [files, setFiles] = useState<File[]>([]);
@@ -137,7 +151,7 @@ export default function ReportPage() {
             if (photo.webPath) {
                 const response = await fetch(photo.webPath);
                 const blob = await response.blob();
-                const file = new File([blob], `photo-${Date.now()}.jpg`, { type: 'image/jpeg' });
+                const file = buildCapturedImageFile(blob, `photo-${Date.now()}`);
                 
                 if (files.length >= 3) {
                     toast.error("Maximum 3 images allowed per report.");
@@ -174,7 +188,7 @@ export default function ReportPage() {
             if (photo.webPath) {
                 const response = await fetch(photo.webPath);
                 const blob = await response.blob();
-                const file = new File([blob], `photo-${Date.now()}.jpg`, { type: 'image/jpeg' });
+                const file = buildCapturedImageFile(blob, `photo-${Date.now()}`);
                 
                 if (files.length >= 3) {
                     toast.error("Maximum 3 images allowed per report.");
@@ -329,7 +343,7 @@ export default function ReportPage() {
             // Prepare form data
             const preparedFiles: File[] = [];
             for (const f of files) {
-                let uploadFile: File | Blob = f;
+                let uploadFile = f;
                 if (needsCompression(f)) {
                     try {
                         const compressedBlob = await compressImage(f);
@@ -338,7 +352,7 @@ export default function ReportPage() {
                         console.warn("Compression failed, using original:", err);
                     }
                 }
-                preparedFiles.push(uploadFile instanceof File ? uploadFile : new File([uploadFile], f.name));
+                preparedFiles.push(uploadFile);
             }
 
             const formDataObj: Parameters<typeof savePendingReport>[0] = {
@@ -428,7 +442,7 @@ export default function ReportPage() {
             // Prepare form data
             const preparedFiles: File[] = [];
             for (const f of files) {
-                let uploadFile: File | Blob = f;
+                let uploadFile = f;
                 if (needsCompression(f)) {
                     try {
                         const compressedBlob = await compressImage(f);
@@ -437,7 +451,7 @@ export default function ReportPage() {
                         console.warn("Compression failed, using original:", err);
                     }
                 }
-                preparedFiles.push(uploadFile instanceof File ? uploadFile : new File([uploadFile], f.name));
+                preparedFiles.push(uploadFile);
             }
 
             const formDataObj: Parameters<typeof savePendingReport>[0] = {

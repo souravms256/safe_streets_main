@@ -50,14 +50,14 @@ export default function LoginPage() {
                 next = null;
             }
 
-            const destination = next && isSafeInternalPath(next) ? next : "/dashboard";
-            router.push(destination);
             // persist token for Service Worker to consume during background sync
             try {
                 await setAuthToken(access_token);
             } catch (e) {
                 console.warn('Failed to write auth token to IndexedDB', e);
             }
+            const destination = next && isSafeInternalPath(next) ? next : "/dashboard";
+            router.push(destination);
         } catch (err) {
             const axiosError = err as AxiosError<{ detail: string }>;
             setError(axiosError.response?.data?.detail || "Login failed. Please try again.");
