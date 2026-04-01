@@ -28,6 +28,7 @@ interface UserProfile {
     dob?: string | null;
     created_at: string;
     points?: number;
+    reportsCount?: number;
 }
 
 export default function ProfilePage() {
@@ -38,22 +39,32 @@ export default function ProfilePage() {
     useEffect(() => {
         const token = localStorage.getItem("access_token");
         if (!token) {
-            router.push("/login");
+            router.push(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
             return;
         }
 
-        api.get("/users/me")
-            .then((res) => setUser(res.data))
+        // Fetch profile and user's report count
+        Promise.all([api.get("/users/me"), api.get("/violations/")])
+            .then(([userRes, reportsRes]) => {
+                const reportsCount = Array.isArray(reportsRes.data) ? reportsRes.data.length : 0;
+                setUser({ ...userRes.data, points: userRes.data.points ?? 0, reportsCount });
+            })
             .catch((err) => {
                 console.error("Failed to fetch profile:", err);
-                if (err.response?.status === 401) router.push("/login");
+                if (err.response?.status === 401) router.push(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
             })
             .finally(() => setLoading(false));
     }, [router]);
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
         localStorage.removeItem("access_token");
         localStorage.removeItem("refresh_token");
+        try {
+            const { removeAuthToken } = await import('@/services/offlineQueue');
+            await removeAuthToken();
+        } catch (e) {
+            console.warn('Failed to remove auth token from IndexedDB', e);
+        }
         window.location.href = "/login";
     };
 
@@ -140,7 +151,7 @@ export default function ProfilePage() {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-4">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-8 section-space">
             {/* Profile Header */}
             {/* Profile Header */}
             <div className="relative z-0 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 px-6 pb-10 pt-6 md:pt-10">
@@ -172,16 +183,16 @@ export default function ProfilePage() {
 
             {/* Stats Row */}
             <div className="relative z-50 mx-auto max-w-lg px-4 -mt-5">
-                <div className="grid grid-cols-3 gap-3">
-                    <div className="rounded-2xl bg-white p-3 text-center shadow-lg shadow-slate-200/50 dark:bg-slate-900 dark:shadow-none">
+                <div className="grid grid-cols-3 gap-4">
+                    <div className="rounded-2xl bg-white card-comfy text-center shadow-lg shadow-slate-200/50 dark:bg-slate-900 dark:shadow-none">
                         <p className="text-lg md:text-xl font-bold text-amber-500 dark:text-amber-400">{user?.points ?? 0}</p>
                         <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mt-0.5">Points</p>
                     </div>
-                    <div className="rounded-2xl bg-white p-3 text-center shadow-lg shadow-slate-200/50 dark:bg-slate-900 dark:shadow-none">
-                        <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">—</p>
+                    <div className="rounded-2xl bg-white card-comfy text-center shadow-lg shadow-slate-200/50 dark:bg-slate-900 dark:shadow-none">
+                        <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">{user?.reportsCount ?? 0}</p>
                         <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mt-0.5">Reports</p>
                     </div>
-                    <div className="rounded-2xl bg-white p-3 text-center shadow-lg shadow-slate-200/50 dark:bg-slate-900 dark:shadow-none">
+                    <div className="rounded-2xl bg-white card-comfy text-center shadow-lg shadow-slate-200/50 dark:bg-slate-900 dark:shadow-none">
                         <p className="text-xs md:text-sm font-bold text-slate-900 dark:text-white">{memberSince || "—"}</p>
                         <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mt-0.5">Since</p>
                     </div>

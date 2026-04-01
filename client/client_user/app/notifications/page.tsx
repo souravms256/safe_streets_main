@@ -51,7 +51,7 @@ export default function NotificationsPage() {
         setMounted(true);
         const token = localStorage.getItem("access_token");
         if (!token) {
-            router.push("/login");
+            router.push(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
             return;
         }
         fetchNotifications(true);
@@ -132,7 +132,7 @@ export default function NotificationsPage() {
     });
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 section-space">
             <Navbar />
             <div className="mx-auto max-w-2xl px-4 pt-24 pb-20">
                 {/* Header */}
@@ -207,7 +207,7 @@ export default function NotificationsPage() {
                 {loading ? (
                     <div className="space-y-4">
                         {[...Array(4)].map((_, i) => (
-                            <div key={i} className="animate-pulse rounded-3xl bg-white p-6 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm text-black">
+                            <div key={i} className="animate-pulse rounded-3xl bg-white card-comfy dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm text-black">
                                 <div className="flex gap-4">
                                     <div className="h-12 w-12 rounded-2xl bg-slate-100 dark:bg-slate-800" />
                                     <div className="flex-1 space-y-4">

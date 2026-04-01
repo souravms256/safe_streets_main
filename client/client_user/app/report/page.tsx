@@ -8,6 +8,9 @@ import toast from "react-hot-toast";
 import { compressImage, needsCompression, blobToFile } from "@/services/imageCompression";
 import { Capacitor } from "@capacitor/core";
 import { Geolocation } from "@capacitor/geolocation";
+import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
+import { savePendingReport, initDB } from "@/services/offlineQueue";
+import { syncPendingReports, requestBackgroundSync } from "@/services/offlineSync";
 
 interface AddressData {
     display_name: string;
@@ -68,6 +71,8 @@ export default function ReportPage() {
     const [loading, setLoading] = useState(false);
     const [analyzing, setAnalyzing] = useState(false);
     const [reportMode, setReportMode] = useState<ReportMode>(TRAFFIC_REPORT_MODE);
+    const [isOnline, setIsOnline] = useState(true);
+    const [showImageOptions, setShowImageOptions] = useState(false);
 
     // New user-input fields
     const [userViolationTypes, setUserViolationTypes] = useState<string[]>([]);
@@ -111,6 +116,80 @@ export default function ReportPage() {
         setPreviews([]);
     }, []);
 
+    const handleOpenCamera = useCallback(async () => {
+        try {
+            if (!Capacitor.isNativePlatform()) {
+                // Fallback for web - trigger file input with camera capture
+                const input = document.getElementById('camera-input') as HTMLInputElement;
+                input?.click();
+                return;
+            }
+
+            // Use Capacitor Camera API on native platforms
+            const photo = await Camera.getPhoto({
+                quality: 90,
+                allowEditing: false,
+                resultType: CameraResultType.Uri,
+                source: CameraSource.Camera,
+                correctOrientation: true,
+            });
+
+            if (photo.webPath) {
+                const response = await fetch(photo.webPath);
+                const blob = await response.blob();
+                const file = new File([blob], `photo-${Date.now()}.jpg`, { type: 'image/jpeg' });
+                
+                if (files.length >= 3) {
+                    toast.error("Maximum 3 images allowed per report.");
+                    return;
+                }
+
+                setFiles(prev => [...prev, file]);
+                setPreviews(prev => [...prev, photo.webPath!]);
+            }
+        } catch (error) {
+            console.error('Camera error:', error);
+            // Silently ignore if user cancelled
+        }
+    }, [files.length]);
+
+    const handleOpenGallery = useCallback(async () => {
+        try {
+            if (!Capacitor.isNativePlatform()) {
+                // Fallback for web - trigger file input
+                const input = document.getElementById('gallery-input') as HTMLInputElement;
+                input?.click();
+                return;
+            }
+
+            // Use Capacitor Camera API on native platforms
+            const photo = await Camera.getPhoto({
+                quality: 90,
+                allowEditing: false,
+                resultType: CameraResultType.Uri,
+                source: CameraSource.Photos,
+                correctOrientation: true,
+            });
+
+            if (photo.webPath) {
+                const response = await fetch(photo.webPath);
+                const blob = await response.blob();
+                const file = new File([blob], `photo-${Date.now()}.jpg`, { type: 'image/jpeg' });
+                
+                if (files.length >= 3) {
+                    toast.error("Maximum 3 images allowed per report.");
+                    return;
+                }
+
+                setFiles(prev => [...prev, file]);
+                setPreviews(prev => [...prev, photo.webPath!]);
+            }
+        } catch (error) {
+            console.error('Gallery error:', error);
+            // Silently ignore if user cancelled
+        }
+    }, [files.length]);
+
     const resolveAddress = useCallback(async (lat: number, lng: number) => {
         setAddressLoading(true);
         try {
@@ -126,6 +205,35 @@ export default function ReportPage() {
         } finally {
             setAddressLoading(false);
         }
+    }, []);
+
+    useEffect(() => {
+        // Initialize IndexedDB for offline storage
+        void initDB().catch(err => console.error('Failed to init offline DB:', err));
+
+        // Track online/offline status
+        const handleOnline = () => {
+            console.log('App is online');
+            setIsOnline(true);
+            // Try to sync pending reports when coming back online
+            void syncPendingReports().catch(err => console.error('Auto-sync failed:', err));
+        };
+
+        const handleOffline = () => {
+            console.log('App is offline');
+            setIsOnline(false);
+        };
+
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+
+        // Set initial online status
+        setIsOnline(navigator.onLine);
+
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
     }, []);
 
     useEffect(() => {
@@ -218,41 +326,75 @@ export default function ReportPage() {
         }
         setAnalyzing(true);
 
-        const formData = new FormData();
-        for (const f of files) {
-            let uploadFile: File | Blob = f;
-            if (needsCompression(f)) {
-                try {
-                    const compressedBlob = await compressImage(f);
-                    uploadFile = blobToFile(compressedBlob, f.name);
-                } catch (err) {
-                    console.warn("Compression failed, using original:", err);
-                }
-            }
-            formData.append(
-                "files",
-                uploadFile,
-                uploadFile instanceof File ? uploadFile.name : f.name
-            );
-        }
-        formData.append("latitude", location.lat.toString());
-        formData.append("longitude", location.lng.toString());
-        formData.append("timestamp", new Date().toISOString());
-        formData.append("report_mode", reportMode);
-
-        // Append optional user-input fields
-        if (isCommunityGarbageReport) {
-            formData.append("user_violation_type", COMMUNITY_REPORT_TAG);
-        } else if (userViolationTypes.length > 0) {
-            formData.append("user_violation_type", userViolationTypes.join(", "));
-        }
-        if (description) formData.append("description", description);
-        if (severity) formData.append("severity", severity);
-        if (!isCommunityGarbageReport && vehicleNumber) {
-            formData.append("vehicle_number", vehicleNumber);
-        }
-
         try {
+            // Prepare form data
+            const preparedFiles: File[] = [];
+            for (const f of files) {
+                let uploadFile: File | Blob = f;
+                if (needsCompression(f)) {
+                    try {
+                        const compressedBlob = await compressImage(f);
+                        uploadFile = blobToFile(compressedBlob, f.name);
+                    } catch (err) {
+                        console.warn("Compression failed, using original:", err);
+                    }
+                }
+                preparedFiles.push(uploadFile instanceof File ? uploadFile : new File([uploadFile], f.name));
+            }
+
+            const formDataObj: Parameters<typeof savePendingReport>[0] = {
+                latitude: location.lat.toString(),
+                longitude: location.lng.toString(),
+                timestamp: new Date().toISOString(),
+                report_mode: reportMode,
+            };
+
+            // Append optional user-input fields
+            if (isCommunityGarbageReport) {
+                formDataObj.user_violation_type = COMMUNITY_REPORT_TAG;
+            } else if (userViolationTypes.length > 0) {
+                formDataObj.user_violation_type = userViolationTypes.join(", ");
+            }
+            if (description) formDataObj.description = description;
+            if (severity) formDataObj.severity = severity;
+            if (!isCommunityGarbageReport && vehicleNumber) {
+                formDataObj.vehicle_number = vehicleNumber;
+            }
+
+            // Check if online
+            if (!isOnline) {
+                // Save to offline queue
+                const reportId = await savePendingReport(formDataObj, preparedFiles);
+                console.log('Report saved to offline queue:', reportId);
+                
+                await requestBackgroundSync();
+                
+                toast.success(
+                    isCommunityGarbageReport
+                        ? "Report saved offline. It will be submitted when you're back online."
+                        : "Report saved offline. It will be submitted when you're back online."
+                );
+                router.push("/pending-reports");
+                return;
+            }
+
+            // If online, submit directly
+            const formData = new FormData();
+            for (const f of preparedFiles) {
+                formData.append("files", f);
+            }
+            formData.append("latitude", formDataObj.latitude);
+            formData.append("longitude", formDataObj.longitude);
+            formData.append("timestamp", formDataObj.timestamp);
+            formData.append("report_mode", formDataObj.report_mode);
+
+            if (formDataObj.user_violation_type) {
+                formData.append("user_violation_type", formDataObj.user_violation_type);
+            }
+            if (formDataObj.description) formData.append("description", formDataObj.description);
+            if (formDataObj.severity) formData.append("severity", formDataObj.severity);
+            if (formDataObj.vehicle_number) formData.append("vehicle_number", formDataObj.vehicle_number);
+
             const response = await api.post("/violations/", formData);
             const { detected_type } = response.data;
             if (isCommunityGarbageReport) {
@@ -276,16 +418,101 @@ export default function ReportPage() {
         }
     };
 
+    const handleSave = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (files.length === 0 || !location) {
+            toast.error("Please provide at least one image and your location.");
+            return;
+        }
+        setAnalyzing(true);
+
+        try {
+            // Prepare form data
+            const preparedFiles: File[] = [];
+            for (const f of files) {
+                let uploadFile: File | Blob = f;
+                if (needsCompression(f)) {
+                    try {
+                        const compressedBlob = await compressImage(f);
+                        uploadFile = blobToFile(compressedBlob, f.name);
+                    } catch (err) {
+                        console.warn("Compression failed, using original:", err);
+                    }
+                }
+                preparedFiles.push(uploadFile instanceof File ? uploadFile : new File([uploadFile], f.name));
+            }
+
+            const formDataObj: Parameters<typeof savePendingReport>[0] = {
+                latitude: location.lat.toString(),
+                longitude: location.lng.toString(),
+                timestamp: new Date().toISOString(),
+                report_mode: reportMode,
+            };
+
+            // Append optional user-input fields
+            if (isCommunityGarbageReport) {
+                formDataObj.user_violation_type = COMMUNITY_REPORT_TAG;
+            } else if (userViolationTypes.length > 0) {
+                formDataObj.user_violation_type = userViolationTypes.join(", ");
+            }
+            if (description) formDataObj.description = description;
+            if (severity) formDataObj.severity = severity;
+            if (!isCommunityGarbageReport && vehicleNumber) {
+                formDataObj.vehicle_number = vehicleNumber;
+            }
+
+            // Save to offline queue
+            const reportId = await savePendingReport(formDataObj, preparedFiles);
+            console.log('Report saved to offline queue:', reportId);
+            
+            await requestBackgroundSync();
+            
+            toast.success("Report saved! You can view it in Pending Uploads.");
+            router.push("/pending-reports");
+        } catch (error) {
+            const message = getApiErrorMessage(error);
+            console.error("Save failed:", error);
+            toast.error(message);
+        } finally {
+            setAnalyzing(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-slate-50 py-6 md:py-12 dark:bg-slate-950 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-lg px-4 sm:px-6">
-                <h1 className="mb-8 text-2xl font-bold text-slate-900 dark:text-white">
-                    {isCommunityGarbageReport ? "Report a Community Garbage Issue" : "Report a Traffic Violation"}
-                </h1>
+                <div className="mb-8 flex items-center justify-between gap-4">
+                    <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+                        {isCommunityGarbageReport ? "Report a Community Garbage Issue" : "Report a Traffic Violation"}
+                    </h1>
+                    <button
+                        onClick={() => router.push('/pending-reports')}
+                        className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
+                    >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>Pending</span>
+                    </button>
+                </div>
+
+                {!isOnline && (
+                    <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/50 dark:bg-amber-950/40">
+                        <div className="flex items-start gap-3">
+                            <svg className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600 dark:text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                            <div>
+                                <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">You&apos;re offline</p>
+                                <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">Your report will be saved and submitted automatically when you&apos;re back online.</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 <div className="rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-900">
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+                    <form onSubmit={handleSubmit} className="space-y-8">
+                        <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/60 p-6 dark:border-slate-700 dark:bg-slate-800/50">
                             <div>
                                 <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
                                     Report Mode
@@ -294,7 +521,7 @@ export default function ReportPage() {
                                     Choose whether this image should go through AI traffic analysis or be saved as a community garbage issue.
                                 </p>
                             </div>
-                            <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="grid gap-4 sm:grid-cols-2">
                                 <button
                                     type="button"
                                     onClick={() => setReportMode(TRAFFIC_REPORT_MODE)}
@@ -327,10 +554,98 @@ export default function ReportPage() {
                         </div>
 
                         {/* ── Image Upload ── */}
-                        <div>
-                            <label className="mb-2 block text-sm font-medium text-slate-900 dark:text-white">
-                                {isCommunityGarbageReport ? "Capture Garbage Image" : "Capture Evidence"}
-                            </label>
+                                <div>
+                            <div className="mb-4 flex items-center justify-between">
+                                <label className="block text-sm font-medium text-slate-900 dark:text-white">
+                                    {isCommunityGarbageReport ? "Capture Garbage Image" : "Capture Evidence"}
+                                </label>
+                                {showImageOptions && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowImageOptions(false)}
+                                        className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+                                    >
+                                        Hide options
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Show Camera/Gallery buttons when no images */}
+                            {previews.length === 0 && !showImageOptions && (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowImageOptions(true)}
+                                    className="mb-4 w-full rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 py-8 text-center hover:border-slate-400 hover:bg-slate-100 transition-colors dark:border-slate-600 dark:bg-slate-900/50 dark:hover:border-slate-500 dark:hover:bg-slate-900"
+                                >
+                                    <svg className="mx-auto mb-2 h-8 w-8 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
+                                    </svg>
+                                    <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Tap to add photo</p>
+                                </button>
+                            )}
+
+                            {/* Camera and Gallery Buttons */}
+                            {showImageOptions && (
+                                <div className="mb-6 grid grid-cols-2 gap-5">
+                                    <input
+                                        type="file"
+                                        id="camera-input"
+                                        className="hidden"
+                                        accept="image/*"
+                                        capture={canCaptureFromCamera ? "environment" : undefined}
+                                        onChange={handleFileChange}
+                                        multiple
+                                    />
+                                    <input
+                                        type="file"
+                                        id="gallery-input"
+                                        className="hidden"
+                                        accept="image/*"
+                                        onChange={handleFileChange}
+                                        multiple
+                                    />
+                                    <label
+                                        htmlFor="camera-input"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            handleOpenCamera();
+                                        }}
+                                        className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-300 bg-blue-50/50 py-6 text-center hover:border-blue-400 hover:bg-blue-50 transition-colors dark:border-blue-700 dark:bg-blue-900/10 dark:hover:border-blue-600 dark:hover:bg-blue-900/20 focus:outline-none"
+                                        role="button"
+                                        tabIndex={0}
+                                        aria-label="Open camera input"
+                                        aria-expanded={showImageOptions}
+                                    >
+                                        <svg className="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300">Camera</span>
+                                        <span className="text-xs text-slate-500 dark:text-slate-400">Capture a new</span>
+                                        <span className="text-xs text-slate-500 dark:text-slate-400">evidence image.</span>
+                                    </label>
+                                    <label
+                                        htmlFor="gallery-input"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            handleOpenGallery();
+                                        }}
+                                        className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50/50 py-6 text-center hover:border-emerald-400 hover:bg-emerald-50 transition-colors dark:border-emerald-700 dark:bg-emerald-900/10 dark:hover:border-emerald-600 dark:hover:bg-emerald-900/20 focus:outline-none"
+                                        role="button"
+                                        tabIndex={0}
+                                        aria-label="Open gallery input"
+                                        aria-expanded={showImageOptions}
+                                    >
+                                        <svg className="h-6 w-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300">Gallery</span>
+                                        <span className="text-xs text-slate-500 dark:text-slate-400">Pick an image</span>
+                                        <span className="text-xs text-slate-500 dark:text-slate-400">already saved on</span>
+                                        <span className="text-xs text-slate-500 dark:text-slate-400">the device.</span>
+                                    </label>
+                                </div>
+                            )}
 
                             {/* Image Preview Gallery */}
                             {previews.length > 0 && (
@@ -343,8 +658,8 @@ export default function ReportPage() {
                                                 <button
                                                     type="button"
                                                     onClick={() => handleRemoveFile(i)}
-                                                    className="absolute right-1 top-1 rounded-full bg-black/50 p-1 text-white hover:bg-black/70 transition-colors"
-                                                    aria-label="Remove image"
+                                                    className="absolute right-1 top-1 rounded-full bg-black/50 p-1 text-white hover:bg-black/70 transition-colors focus:outline-none"
+                                                    aria-label={`Remove image ${i + 1}`}
                                                 >
                                                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -355,31 +670,15 @@ export default function ReportPage() {
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <span className="text-xs text-slate-500 dark:text-slate-400">{files.length}/3 images</span>
-                                        <button type="button" onClick={handleClearAll} className="text-xs text-red-500 hover:text-red-600 font-medium">Clear all</button>
+                                        <button
+                                            type="button"
+                                            onClick={handleClearAll}
+                                            className="text-xs text-red-500 hover:text-red-600 font-medium focus:outline-none"
+                                            aria-label="Clear all images"
+                                        >
+                                            Clear all
+                                        </button>
                                     </div>
-                                </div>
-                            )}
-
-                            {previews.length < 3 && (
-                                <div className="space-y-3">
-                                    <label className="flex min-h-[160px] w-full cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-blue-300 bg-blue-50/50 p-6 text-center transition-all hover:border-blue-500 hover:bg-blue-50 dark:border-blue-800 dark:bg-blue-900/10 dark:hover:border-blue-600 dark:hover:bg-blue-900/20">
-                                        <svg className="mx-auto h-12 w-12 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                                        </svg>
-                                        <div className="mt-2 text-sm text-blue-600 dark:text-blue-400">
-                                            <span className="font-semibold hover:text-blue-500">Upload a file</span>
-                                            <span className="pl-1">or take a photo</span>
-                                        </div>
-                                        <input
-                                            type="file"
-                                            className="hidden"
-                                            accept="image/*"
-                                            capture={canCaptureFromCamera ? "environment" : undefined}
-                                            onChange={handleFileChange}
-                                            multiple
-                                        />
-                                    </label>
                                 </div>
                             )}
                         </div>
@@ -527,9 +826,9 @@ export default function ReportPage() {
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
                                     placeholder={isCommunityGarbageReport ? "Describe the garbage issue you observed..." : "Describe the violation or road issue you observed..."}
-                                    rows={3}
+                                    rows={4}
                                     maxLength={500}
-                                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:placeholder-slate-500 transition-colors resize-none"
+                                    className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:placeholder-slate-500 transition-colors resize-none"
                                 />
                                 <p className="mt-1 text-xs text-slate-400 dark:text-slate-500 text-right">
                                     {description.length}/500
@@ -574,23 +873,32 @@ export default function ReportPage() {
                                         onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
                                         placeholder="e.g. KA 01 AB 1234 (optional)"
                                         maxLength={20}
-                                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:placeholder-slate-500 transition-colors uppercase tracking-wider"
+                                        className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:placeholder-slate-500 transition-colors uppercase tracking-wider"
                                     />
                                 </div>
                             )}
                         </div>
 
-                        {/* ── Submit ── */}
-                        <Button
-                            type="submit"
-                            className="w-full"
-                            isLoading={analyzing}
-                            disabled={files.length === 0 || !location}
-                        >
-                            {analyzing
-                                ? (isCommunityGarbageReport ? "Submitting Garbage Report..." : "Analyzing Evidence...")
-                                : (isCommunityGarbageReport ? "Submit Garbage Report" : "Submit Report")}
-                        </Button>
+                        {/* ── Submit Buttons ── */}
+                        <div className="flex gap-3">
+                            <button
+                                type="button"
+                                onClick={handleSave}
+                                disabled={files.length === 0 || !location || analyzing}
+                                className="flex-1 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
+                            >
+                                {analyzing ? "Saving..." : "💾 Save"}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleSubmit}
+                                disabled={files.length === 0 || !location || analyzing}
+                                className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-700 dark:hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
+                            >
+                                {analyzing && <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>}
+                                {analyzing ? "Uploading & Analyzing..." : "📤 Upload & Analyze"}
+                            </button>
+                        </div>
                     </form>
                 </div>
             </div>

@@ -121,8 +121,8 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
 
     return (
         <>
-            <div className="overflow-hidden rounded-xl bg-white shadow-sm dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
-                <div className="border-b border-slate-200 px-6 py-4 dark:border-slate-800 flex items-center justify-between">
+            <div className="overflow-hidden rounded-xl bg-white shadow-sm dark:bg-slate-900 border border-slate-100 dark:border-slate-800 card-comfy">
+                <div className="border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
                     <h3 className="text-base font-semibold leading-6 text-slate-900 dark:text-white">
                         Reported Violations
                     </h3>
@@ -146,7 +146,7 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                     <ul className="divide-y divide-slate-100 dark:divide-slate-800">
                         {paginatedViolations.map((violation, index) => {
                             return (
-                            <li key={violation.id} className="p-4 active:bg-slate-50 dark:active:bg-slate-800/50 transition-colors">
+                            <li key={violation.id} className="p-5 active:bg-slate-50 dark:active:bg-slate-800/50 transition-colors">
                                 <div className="flex gap-4">
                                     {/* Thumbnail */}
                                     <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800">
@@ -241,7 +241,7 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                             {paginatedViolations.map((violation, index) => {
                                 return (
                                 <tr key={violation.id}>
-                                    <td className="whitespace-nowrap px-6 py-4">
+                                    <td className="whitespace-nowrap px-8 py-5">
                                         <div className="relative h-16 w-16 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
                                             <Image
                                                 src={violation.image_url}
@@ -252,12 +252,12 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                                             />
                                         </div>
                                     </td>
-                                    <td className="whitespace-nowrap px-6 py-4">
+                                    <td className="whitespace-nowrap px-8 py-5">
                                         <span className="font-medium text-slate-900 dark:text-white">
                                             {violation.violation_type}
                                         </span>
                                     </td>
-                                    <td className="whitespace-nowrap px-6 py-4">
+                                    <td className="whitespace-nowrap px-8 py-5">
                                         <span
                                             className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${violation.status === "Verified"
                                                 ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
@@ -269,15 +269,15 @@ export default function ViolationsTable({ violations, onDelete }: ViolationsTabl
                                             {violation.status}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">
+                                    <td className="px-8 py-5 text-sm text-slate-500 dark:text-slate-400">
                                         <div className="max-w-xs overflow-hidden text-ellipsis whitespace-nowrap" title={violation.details?.address || violation.address || violation.location}>
                                             {violation.details?.short_address || violation.details?.address || violation.address || violation.location}
                                         </div>
                                     </td>
-                                    <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-500 dark:text-slate-400">
+                                    <td className="whitespace-nowrap px-8 py-5 text-sm text-slate-500 dark:text-slate-400">
                                         {new Date(violation.created_at).toLocaleDateString()}
                                     </td>
-                                    <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                                    <td className="whitespace-nowrap px-8 py-5 text-right text-sm font-medium">
                                         <div className="flex items-center justify-end space-x-2">
                                             <button
                                                 onClick={() => openModal(violation)}
