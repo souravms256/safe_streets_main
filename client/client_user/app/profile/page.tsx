@@ -28,6 +28,20 @@ interface UserProfile {
     dob?: string | null;
     created_at: string;
     points?: number;
+    reportsCount?: number;
+}
+
+function extractReportsCount(data: unknown): number {
+    if (
+        typeof data === "object" &&
+        data !== null &&
+        "count" in data &&
+        typeof (data as { count?: unknown }).count === "number"
+    ) {
+        return (data as { count: number }).count;
+    }
+
+    return Array.isArray(data) ? data.length : 0;
 }
 
 export default function ProfilePage() {
@@ -36,24 +50,67 @@ export default function ProfilePage() {
     const router = useRouter();
 
     useEffect(() => {
+        let isCancelled = false;
         const token = localStorage.getItem("access_token");
         if (!token) {
-            router.push("/login");
+            router.push(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
             return;
         }
 
-        api.get("/users/me")
-            .then((res) => setUser(res.data))
-            .catch((err) => {
+        const loadProfile = async () => {
+            try {
+                const userRes = await api.get("/users/me");
+                let reportsCount = 0;
+
+                try {
+                    const reportsRes = await api.get("/violations/count");
+                    reportsCount = extractReportsCount(reportsRes.data);
+                } catch (countError) {
+                    console.warn("Failed to fetch report count. Falling back to reports list.", countError);
+                    try {
+                        const reportsRes = await api.get("/violations/");
+                        reportsCount = extractReportsCount(reportsRes.data);
+                    } catch (reportsError) {
+                        console.warn("Failed to fetch reports fallback for profile.", reportsError);
+                    }
+                }
+
+                if (!isCancelled) {
+                    setUser({ ...userRes.data, points: userRes.data.points ?? 0, reportsCount });
+                }
+            } catch (err) {
                 console.error("Failed to fetch profile:", err);
-                if (err.response?.status === 401) router.push("/login");
-            })
-            .finally(() => setLoading(false));
+                const status =
+                    typeof err === "object" && err !== null && "response" in err
+                        ? (err as { response?: { status?: number } }).response?.status
+                        : undefined;
+
+                if (status === 401) {
+                    router.push(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+                }
+            } finally {
+                if (!isCancelled) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        void loadProfile();
+
+        return () => {
+            isCancelled = true;
+        };
     }, [router]);
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
         localStorage.removeItem("access_token");
         localStorage.removeItem("refresh_token");
+        try {
+            const { removeAuthToken } = await import('@/services/offlineQueue');
+            await removeAuthToken();
+        } catch (e) {
+            console.warn('Failed to remove auth token from IndexedDB', e);
+        }
         window.location.href = "/login";
     };
 
@@ -140,7 +197,7 @@ export default function ProfilePage() {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-4">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-8 section-space">
             {/* Profile Header */}
             {/* Profile Header */}
             <div className="relative z-0 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 px-6 pb-10 pt-6 md:pt-10">
@@ -172,16 +229,16 @@ export default function ProfilePage() {
 
             {/* Stats Row */}
             <div className="relative z-50 mx-auto max-w-lg px-4 -mt-5">
-                <div className="grid grid-cols-3 gap-3">
-                    <div className="rounded-2xl bg-white p-3 text-center shadow-lg shadow-slate-200/50 dark:bg-slate-900 dark:shadow-none">
+                <div className="grid grid-cols-3 gap-4">
+                    <div className="rounded-2xl bg-white card-comfy text-center shadow-lg shadow-slate-200/50 dark:bg-slate-900 dark:shadow-none">
                         <p className="text-lg md:text-xl font-bold text-amber-500 dark:text-amber-400">{user?.points ?? 0}</p>
                         <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mt-0.5">Points</p>
                     </div>
-                    <div className="rounded-2xl bg-white p-3 text-center shadow-lg shadow-slate-200/50 dark:bg-slate-900 dark:shadow-none">
-                        <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">—</p>
+                    <div className="rounded-2xl bg-white card-comfy text-center shadow-lg shadow-slate-200/50 dark:bg-slate-900 dark:shadow-none">
+                        <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">{user?.reportsCount ?? 0}</p>
                         <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mt-0.5">Reports</p>
                     </div>
-                    <div className="rounded-2xl bg-white p-3 text-center shadow-lg shadow-slate-200/50 dark:bg-slate-900 dark:shadow-none">
+                    <div className="rounded-2xl bg-white card-comfy text-center shadow-lg shadow-slate-200/50 dark:bg-slate-900 dark:shadow-none">
                         <p className="text-xs md:text-sm font-bold text-slate-900 dark:text-white">{memberSince || "—"}</p>
                         <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mt-0.5">Since</p>
                     </div>

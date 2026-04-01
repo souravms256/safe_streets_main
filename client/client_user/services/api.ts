@@ -1,7 +1,7 @@
 import axios, { AxiosError } from "axios";
 
 const api = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL || "https://safe-streets-main-vkm4.onrender.com",
+    baseURL: process.env.NEXT_PUBLIC_API_URL || "https://safe-streets-backend.onrender.com",
     headers: {
         "Content-Type": "application/json",
     },
@@ -9,8 +9,29 @@ const api = axios.create({
 
 // Add token to requests if available
 api.interceptors.request.use((config) => {
-    if (typeof FormData !== "undefined" && config.data instanceof FormData) {
-        config.headers.setContentType(null);
+    // If sending FormData, let the browser set the Content-Type (including multipart boundaries).
+    // Axios may set a default Content-Type; remove it so the correct header is used.
+    try {
+        if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+            if (config.headers) {
+                const headers = config.headers as any;
+
+                if (typeof headers.setContentType === "function") {
+                    headers.setContentType(undefined);
+                }
+                if (typeof headers.delete === "function") {
+                    headers.delete("Content-Type");
+                    headers.delete("content-type");
+                } else {
+                    delete headers["Content-Type"];
+                    delete headers["content-type"];
+                }
+            }
+        }
+    } catch (err) {
+        // Defensive: if something unexpected happens, continue without crashing.
+        // eslint-disable-next-line no-console
+        console.warn('[API] Failed to adjust headers for FormData', err);
     }
 
     const token = localStorage.getItem("access_token");

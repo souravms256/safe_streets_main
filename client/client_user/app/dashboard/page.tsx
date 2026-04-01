@@ -138,13 +138,13 @@ export default function DashboardPage() {
 
     return (
         <PullToRefresh onRefresh={handleRefresh}>
-            <div className="min-h-screen bg-blue-50 py-4 sm:py-8 dark:bg-slate-900">
+            <div className="min-h-screen bg-blue-50 py-6 sm:py-12 md:py-8 dark:bg-slate-900">
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"
                 >
-                    <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="mb-8 sm:mb-12 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                         <div>
                             <div className="flex items-center gap-2 mb-1">
                                 <LayoutDashboard className="w-6 h-6 text-blue-600 dark:text-blue-400" />
@@ -174,14 +174,14 @@ export default function DashboardPage() {
                         variants={container}
                         initial="hidden"
                         animate="show"
-                        className="grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-4"
+                        className="grid grid-cols-2 gap-4 sm:gap-8 md:grid-cols-4"
                     >
                         {stats.map((stat, index) => (
                             <motion.div
                                 key={index}
                                 variants={item}
                                 whileHover={{ y: -5 }}
-                                className="group relative overflow-hidden rounded-2xl bg-white p-4 sm:p-6 shadow-sm dark:bg-slate-900 border border-slate-100 dark:border-slate-800 transition-all hover:shadow-xl dark:hover:border-slate-700"
+                                className="group relative overflow-hidden rounded-2xl bg-white card-comfy shadow-sm dark:bg-slate-900 border border-slate-100 dark:border-slate-800 transition-all hover:shadow-xl dark:hover:border-slate-700"
                             >
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">

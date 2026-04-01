@@ -36,11 +36,17 @@ export default function ProfileMenu({ user }: ProfileMenuProps) {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
         Cookies.remove("access_token");
         Cookies.remove("refresh_token");
         localStorage.removeItem("access_token");
         localStorage.removeItem("refresh_token");
+        try {
+            const { removeAuthToken } = await import('@/services/offlineQueue');
+            await removeAuthToken();
+        } catch (e) {
+            console.warn('Failed to remove auth token from IndexedDB', e);
+        }
         window.location.href = "/login";
     };
 

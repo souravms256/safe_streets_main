@@ -27,8 +27,15 @@ const Navbar = () => {
     const pathname = usePathname();
     const router = useRouter();
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
         localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+        try {
+            const { removeAuthToken } = await import('@/services/offlineQueue');
+            await removeAuthToken();
+        } catch (e) {
+            console.warn('Failed to remove auth token from IndexedDB', e);
+        }
         setUser(null);
         router.push("/login");
         setIsOpen(false);
@@ -76,21 +83,21 @@ const Navbar = () => {
                 <div className="flex h-16 md:h-20 items-center justify-between">
                     {/* Logo */}
                     <div className="flex-shrink-0">
-                        <Link href={user ? "/dashboard" : "/"} className="flex items-center gap-2 group">
-                            <span className="text-2xl font-black tracking-tight text-blue-600 dark:text-blue-500 transition-transform group-hover:scale-105">
+                        <Link href={user ? "/dashboard" : "/"} className="flex items-center gap-3 group">
+                            <span className="text-3xl font-extrabold tracking-tight text-blue-600 dark:text-blue-500 transition-transform group-hover:scale-105">
                                 SafeStreets
                             </span>
                         </Link>
                     </div>
 
                     {/* Desktop Nav */}
-                    <div className="hidden md:block absolute left-1/2 -translate-x-1/2">
-                        <div className="flex items-center space-x-2 bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-full px-2 py-1.5">
+                        <div className="hidden md:block absolute left-1/2 -translate-x-1/2">
+                        <div className="flex items-center space-x-3 bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-full px-3 py-2">
                             {activeLinks.map((link) => (
                                 <Link
                                     key={link.name}
                                     href={link.href}
-                                    className={`group relative flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all hover:text-blue-600 dark:hover:text-blue-400 ${isActive(link.href)
+                                    className={`group relative flex items-center gap-3 rounded-full px-5 py-3 text-sm font-semibold transition-all hover:text-blue-600 dark:hover:text-blue-400 ${isActive(link.href)
                                         ? "text-blue-700 dark:text-blue-400"
                                         : "text-slate-600 dark:text-slate-300 hover:bg-slate-100/50 dark:hover:bg-slate-800/50"
                                         }`}
@@ -181,7 +188,7 @@ const Navbar = () => {
                                                 : "text-slate-700 hover:bg-slate-50 hover:text-blue-600 dark:text-slate-200 dark:hover:bg-slate-800/60 dark:hover:text-blue-400"
                                                 }`}
                                         >
-                                            <div className={`flex h-11 w-11 items-center justify-center rounded-xl shadow-sm ${isActive(link.href) ? "bg-white text-blue-600 dark:bg-blue-950 dark:text-blue-400" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}>
+                                            <div className={`flex h-12 w-12 items-center justify-center rounded-2xl shadow-sm ${isActive(link.href) ? "bg-white text-blue-600 dark:bg-blue-950 dark:text-blue-400" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}>
                                                 <link.icon className="h-5 w-5" strokeWidth={2.5} />
                                             </div>
                                             {link.name}
@@ -198,7 +205,7 @@ const Navbar = () => {
                                 {user ? (
                                         <>
                                         <Link href="/profile">
-                                            <Button variant="ghost" className="w-full justify-start gap-4 h-14 rounded-2xl text-base font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
+                                            <Button variant="ghost" className="w-full justify-start gap-4 h-16 rounded-2xl text-base font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
                                                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800">
                                                     <UserIcon className="h-4 w-4 text-slate-500 dark:text-slate-400" strokeWidth={2.5} />
                                                 </div>
@@ -208,7 +215,7 @@ const Navbar = () => {
                                         <Button
                                             variant="ghost"
                                             onClick={handleLogout}
-                                            className="w-full justify-start gap-4 h-14 rounded-2xl text-base font-semibold text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
+                                            className="w-full justify-start gap-4 h-16 rounded-2xl text-base font-semibold text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
                                         >
                                             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 dark:bg-red-900/20">
                                                 <LogOut className="h-4 w-4 text-red-500" strokeWidth={2.5} />
@@ -217,15 +224,15 @@ const Navbar = () => {
                                         </Button>
                                         </>
                                 ) : (
-                                        <div className="grid grid-cols-2 gap-3 pb-2">
+                                            <div className="grid grid-cols-2 gap-4 pb-3">
                                             <Link href="/login" className="w-full">
-                                                <Button variant="outline" className="w-full h-14 rounded-2xl text-base font-bold gap-2 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 shadow-sm active:scale-95">
+                                                <Button variant="outline" className="w-full h-16 rounded-2xl text-base font-bold gap-2 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 shadow-sm active:scale-95">
                                                     <LogIn className="h-5 w-5 opacity-70" strokeWidth={2.5} />
                                                     Log in
                                                 </Button>
                                             </Link>
                                             <Link href="/register" className="w-full">
-                                                <Button variant="primary" className="w-full h-14 rounded-2xl text-base font-bold gap-2 shadow-lg shadow-blue-500/25 active:scale-95">
+                                                <Button variant="primary" className="w-full h-16 rounded-2xl text-base font-bold gap-3 shadow-lg shadow-blue-500/25 active:scale-95">
                                                     <UserPlus className="h-5 w-5 opacity-90" strokeWidth={2.5} />
                                                     Sign up
                                                 </Button>
