@@ -101,3 +101,44 @@ main {
   }
 }
 
+/* ----- App-wide spacing improvements ----- */
+:root {
+  --app-gap: 1rem; /* 16px default gap */
+  --app-gap-lg: 1.5rem; /* 24px larger gap */
+  --app-card-padding: 1rem; /* default card padding */
+  --app-card-padding-lg: 1.25rem;
+}
+
+/* Utility: more breathing room for stacked sections */
+.section-space {
+  padding-top: var(--app-gap-lg);
+  padding-bottom: var(--app-gap-lg);
+}
+
+/* Utility: more comfortable card padding */
+.card-comfy {
+  padding: var(--app-card-padding);
+  padding-left: calc(var(--app-card-padding) + 0.25rem);
+  padding-right: calc(var(--app-card-padding) + 0.25rem);
+}
+
+/* Slightly larger body font for readability */
+body {
+  font-size: 16px;
+}
+
+/* Accessibility: clear and visible focus styles for keyboard users */
+:focus-visible {
+  outline: 3px solid rgba(59,130,246,0.95); /* blue-600 */
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :focus-visible {
+    outline: 3px solid rgba(147,197,253,0.95); /* lighter blue for dark */
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+}
+

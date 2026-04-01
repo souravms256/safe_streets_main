@@ -43,7 +43,7 @@ export default function LeaderboardPage() {
     useEffect(() => {
         const token = localStorage.getItem("access_token");
         if (!token) {
-            router.push("/login");
+            router.push(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
             return;
         }
         fetchData();

@@ -1,4 +1,8 @@
 const CACHE_NAME = 'safestreets-v3';
+const DB_NAME = 'safestreets-offline-db';
+const DB_VERSION = 2;
+const PENDING_REPORTS_STORE = 'pending-reports';
+const AUTH_STORE = 'auth';
 const STATIC_ASSETS = [
     '/',
     '/manifest.json',
@@ -98,6 +102,173 @@ self.addEventListener('sync', (event) => {
 
 async function syncViolations() {
     console.log('[SW] Syncing pending violations...');
+    try {
+        const token = await getStoredToken();
+        if (!token) {
+            console.warn('[SW] No stored auth token available; skipping background sync');
+            return;
+        }
+
+        // Get all pending reports from IndexedDB
+        const db = await openDB();
+        const reports = await getAllPendingReports(db);
+        
+        console.log(`[SW] Found ${reports.length} pending reports to sync`);
+        
+        let synced = 0;
+        let failed = 0;
+        
+        for (const report of reports) {
+            try {
+                // Build FormData from stored report
+                const formData = new FormData();
+                
+                // Add images
+                if (report.formData.imageUrls && report.formData.imageUrls.length > 0) {
+                    for (let i = 0; i < report.formData.imageUrls.length; i++) {
+                        const dataUrl = report.formData.imageUrls[i];
+                        const blob = dataUrlToBlob(dataUrl);
+                        formData.append('files', blob, `image-${i}.jpg`);
+                    }
+                }
+                
+                // Add form fields
+                formData.append('latitude', report.formData.latitude);
+                formData.append('longitude', report.formData.longitude);
+                formData.append('timestamp', report.formData.timestamp);
+                formData.append('report_mode', report.formData.report_mode);
+                
+                if (report.formData.user_violation_type) {
+                    formData.append('user_violation_type', report.formData.user_violation_type);
+                }
+                if (report.formData.description) {
+                    formData.append('description', report.formData.description);
+                }
+                if (report.formData.severity) {
+                    formData.append('severity', report.formData.severity);
+                }
+                if (report.formData.vehicle_number) {
+                    formData.append('vehicle_number', report.formData.vehicle_number);
+                }
+                
+                // Submit to backend
+                const response = await fetch('/api/violations/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    console.log(`[SW] Successfully synced report ${report.id}`);
+                    await deletePendingReport(db, report.id);
+                    synced++;
+                } else {
+                    console.error(`[SW] Failed to sync report ${report.id}: ${response.status}`);
+                    failed++;
+                }
+            } catch (error) {
+                console.error(`[SW] Error syncing report ${report.id}:`, error);
+                failed++;
+            }
+        }
+        
+        console.log(`[SW] Sync complete: ${synced} synced, ${failed} failed`);
+        
+        // Notify all clients about sync completion
+        const clients = await self.clients.matchAll();
+        clients.forEach(client => {
+            client.postMessage({
+                type: 'OFFLINE_SYNC_COMPLETE',
+                detail: { synced, failed }
+            });
+        });
+    } catch (error) {
+        console.error('[SW] Sync error:', error);
+    }
+}
+
+// IndexedDB helpers for SW
+async function openDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+
+            if (!db.objectStoreNames.contains(PENDING_REPORTS_STORE)) {
+                const store = db.createObjectStore(PENDING_REPORTS_STORE, { keyPath: 'id' });
+                store.createIndex('status', 'status', { unique: false });
+                store.createIndex('timestamp', 'timestamp', { unique: false });
+            }
+
+            if (!db.objectStoreNames.contains(AUTH_STORE)) {
+                db.createObjectStore(AUTH_STORE, { keyPath: 'key' });
+            }
+        };
+
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+    });
+}
+
+async function getAllPendingReports(db) {
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction([PENDING_REPORTS_STORE], 'readonly');
+        const store = transaction.objectStore(PENDING_REPORTS_STORE);
+        const request = store.getAll();
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+    });
+}
+
+async function deletePendingReport(db, id) {
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction([PENDING_REPORTS_STORE], 'readwrite');
+        const store = transaction.objectStore(PENDING_REPORTS_STORE);
+        const request = store.delete(id);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve();
+    });
+}
+
+async function getStoredToken() {
+    // Attempt to read token from IndexedDB 'auth' store where the client
+    // is expected to write it. Service Workers cannot access localStorage.
+    try {
+        const db = await openDB();
+        return await new Promise((resolve) => {
+            try {
+                const tx = db.transaction([AUTH_STORE], 'readonly');
+                const store = tx.objectStore(AUTH_STORE);
+                const req = store.get('access_token');
+                req.onsuccess = () => resolve((req.result && req.result.value) || '');
+                req.onerror = () => resolve('');
+            } catch (e) {
+                console.warn('[SW] Failed to read token from IndexedDB', e);
+                resolve('');
+            }
+        });
+    } catch (e) {
+        console.warn('[SW] getStoredToken: IndexedDB read failed', e);
+        return '';
+    }
+}
+
+function dataUrlToBlob(dataUrl) {
+    const [header, data] = dataUrl.split(',');
+    const mimeMatch = header.match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+    const bstr = atob(data);
+    const n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    
+    for (let i = 0; i < n; i++) {
+        u8arr[i] = bstr.charCodeAt(i);
+    }
+    
+    return new Blob([u8arr], { type: mime });
 }
 
 // Push notification handler

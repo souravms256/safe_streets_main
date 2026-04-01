@@ -16,7 +16,7 @@ export const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   const baseStyles =
-    "inline-flex items-center justify-center rounded-lg font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed";
+  "inline-flex items-center justify-center rounded-xl font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed";
 
   const variants = {
     primary:
@@ -32,13 +32,15 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   const sizes = {
-    sm: "h-9 px-3 text-sm",
-    md: "h-11 px-6 text-base",
-    lg: "h-14 px-8 text-lg",
+    sm: "h-10 px-4 text-sm",
+    md: "h-12 px-7 text-base",
+    lg: "h-16 px-10 text-lg",
   };
 
   return (
     <button
+  aria-disabled={disabled || isLoading}
+  // allow keyboard users to see focus via :focus-visible in globals.css
       className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
       disabled={disabled || isLoading}
       {...props}

@@ -6,9 +6,18 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import api from "@/services/api";
+import { setAuthToken } from '@/services/offlineQueue';
 import { Eye, EyeOff } from "lucide-react";
 import PageTransition from "@/components/PageTransition";
 import { AxiosError } from "axios";
+
+function isSafeInternalPath(path: string): boolean {
+    return (
+        path.startsWith("/") &&
+        !path.startsWith("//") &&
+        !/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(path)
+    );
+}
 
 export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
@@ -32,7 +41,23 @@ export default function LoginPage() {
             localStorage.setItem("access_token", access_token);
             localStorage.setItem("refresh_token", refresh_token);
 
-            router.push("/dashboard");
+            // Read 'next' from the URL on the client to avoid calling useSearchParams during pre-render
+            let next: string | null = null;
+            try {
+                const params = new URLSearchParams(window.location.search);
+                next = params.get("next");
+            } catch {
+                next = null;
+            }
+
+            // persist token for Service Worker to consume during background sync
+            try {
+                await setAuthToken(access_token);
+            } catch (e) {
+                console.warn('Failed to write auth token to IndexedDB', e);
+            }
+            const destination = next && isSafeInternalPath(next) ? next : "/dashboard";
+            router.push(destination);
         } catch (err) {
             const axiosError = err as AxiosError<{ detail: string }>;
             setError(axiosError.response?.data?.detail || "Login failed. Please try again.");

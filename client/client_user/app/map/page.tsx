@@ -68,7 +68,8 @@ export default function MapPage() {
     useEffect(() => {
         const token = localStorage.getItem("access_token");
         if (!token) {
-            router.push("/login");
+            // preserve current path so user returns here after login
+            router.push(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
             return;
         }
 
@@ -212,7 +213,7 @@ export default function MapPage() {
     );
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden section-space">
             {/* Desktop: Standard layout with header. Mobile: Full-screen map */}
             <div className="hidden md:block pt-24 pb-8">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -268,7 +269,7 @@ export default function MapPage() {
                                     initial={{ x: -400, opacity: 0 }}
                                     animate={{ x: 0, opacity: 1 }}
                                     exit={{ x: -400, opacity: 0 }}
-                                    className="h-full w-80 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-xl overflow-y-auto"
+                                    className="h-full w-80 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-xl overflow-y-auto card-comfy"
                                 >
                                     <div className="flex items-center justify-between mb-6">
                                         <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
