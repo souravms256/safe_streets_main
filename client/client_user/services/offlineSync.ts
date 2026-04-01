@@ -16,6 +16,16 @@ import type { PendingReport } from './offlineQueue';
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000; // Start with 1 second, exponential backoff
 
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+function getRetryDelayMs(report: Pick<PendingReport, 'retryCount'>): number {
+  return RETRY_DELAY_MS * 2 ** Math.max(0, report.retryCount - 1);
+}
+
 /**
  * Sync all pending reports
  */
@@ -69,6 +79,10 @@ export async function syncSingleReport(reportId: string): Promise<boolean> {
 
     console.log(`[Sync] Syncing report ${reportId} (retry ${report.retryCount})`);
     await updateReportStatus(reportId, 'retrying');
+
+    if (report.retryCount > 0) {
+      await delay(getRetryDelayMs(report));
+    }
 
     // Build FormData from stored report
     const formData = new FormData();

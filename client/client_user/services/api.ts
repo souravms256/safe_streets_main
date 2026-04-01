@@ -14,8 +14,18 @@ api.interceptors.request.use((config) => {
     try {
         if (typeof FormData !== "undefined" && config.data instanceof FormData) {
             if (config.headers) {
-                // headers can be AxiosRequestHeaders object; delete Content-Type key if present
-                delete (config.headers as any)["Content-Type"];
+                const headers = config.headers as any;
+
+                if (typeof headers.setContentType === "function") {
+                    headers.setContentType(undefined);
+                }
+                if (typeof headers.delete === "function") {
+                    headers.delete("Content-Type");
+                    headers.delete("content-type");
+                } else {
+                    delete headers["Content-Type"];
+                    delete headers["content-type"];
+                }
             }
         }
     } catch (err) {

@@ -1,4 +1,8 @@
 const CACHE_NAME = 'safestreets-v3';
+const DB_NAME = 'safestreets-offline-db';
+const DB_VERSION = 2;
+const PENDING_REPORTS_STORE = 'pending-reports';
+const AUTH_STORE = 'auth';
 const STATIC_ASSETS = [
     '/',
     '/manifest.json',
@@ -182,7 +186,22 @@ async function syncViolations() {
 // IndexedDB helpers for SW
 async function openDB() {
     return new Promise((resolve, reject) => {
-        const request = indexedDB.open('safestreets-offline-db', 1);
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+
+            if (!db.objectStoreNames.contains(PENDING_REPORTS_STORE)) {
+                const store = db.createObjectStore(PENDING_REPORTS_STORE, { keyPath: 'id' });
+                store.createIndex('status', 'status', { unique: false });
+                store.createIndex('timestamp', 'timestamp', { unique: false });
+            }
+
+            if (!db.objectStoreNames.contains(AUTH_STORE)) {
+                db.createObjectStore(AUTH_STORE, { keyPath: 'key' });
+            }
+        };
+
         request.onerror = () => reject(request.error);
         request.onsuccess = () => resolve(request.result);
     });
@@ -190,8 +209,8 @@ async function openDB() {
 
 async function getAllPendingReports(db) {
     return new Promise((resolve, reject) => {
-        const transaction = db.transaction(['pending-reports'], 'readonly');
-        const store = transaction.objectStore('pending-reports');
+        const transaction = db.transaction([PENDING_REPORTS_STORE], 'readonly');
+        const store = transaction.objectStore(PENDING_REPORTS_STORE);
         const request = store.getAll();
         request.onerror = () => reject(request.error);
         request.onsuccess = () => resolve(request.result);
@@ -200,8 +219,8 @@ async function getAllPendingReports(db) {
 
 async function deletePendingReport(db, id) {
     return new Promise((resolve, reject) => {
-        const transaction = db.transaction(['pending-reports'], 'readwrite');
-        const store = transaction.objectStore('pending-reports');
+        const transaction = db.transaction([PENDING_REPORTS_STORE], 'readwrite');
+        const store = transaction.objectStore(PENDING_REPORTS_STORE);
         const request = store.delete(id);
         request.onerror = () => reject(request.error);
         request.onsuccess = () => resolve();
@@ -215,8 +234,8 @@ async function getStoredToken() {
         const db = await openDB();
         return await new Promise((resolve) => {
             try {
-                const tx = db.transaction(['auth'], 'readonly');
-                const store = tx.objectStore('auth');
+                const tx = db.transaction([AUTH_STORE], 'readonly');
+                const store = tx.objectStore(AUTH_STORE);
                 const req = store.get('access_token');
                 req.onsuccess = () => resolve((req.result && req.result.value) || '');
                 req.onerror = () => resolve('');
