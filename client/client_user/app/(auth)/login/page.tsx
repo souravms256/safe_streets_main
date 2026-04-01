@@ -11,6 +11,14 @@ import { Eye, EyeOff } from "lucide-react";
 import PageTransition from "@/components/PageTransition";
 import { AxiosError } from "axios";
 
+function isSafeInternalPath(path: string): boolean {
+    return (
+        path.startsWith("/") &&
+        !path.startsWith("//") &&
+        !/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(path)
+    );
+}
+
 export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -42,8 +50,8 @@ export default function LoginPage() {
                 next = null;
             }
 
-            if (next) router.push(next);
-            else router.push("/dashboard");
+            const destination = next && isSafeInternalPath(next) ? next : "/dashboard";
+            router.push(destination);
             // persist token for Service Worker to consume during background sync
             try {
                 await setAuthToken(access_token);

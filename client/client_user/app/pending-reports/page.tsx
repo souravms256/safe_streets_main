@@ -64,7 +64,10 @@ export default function PendingReportsPage() {
 
     setUploadingId(report.id);
     try {
-      await updateReportStatus(report.id, "pending");
+      await updateReportStatus(report.id, "pending", undefined, {
+        resetRetryCount: true,
+        clearLastError: true,
+      });
       
       const success = await syncSingleReport(report.id);
       if (success) {

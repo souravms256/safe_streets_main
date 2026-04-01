@@ -241,7 +241,11 @@ export async function getPendingReport(id: string): Promise<PendingReport | unde
 export async function updateReportStatus(
   id: string,
   status: PendingReport['status'],
-  lastError?: string
+  lastError?: string,
+  options?: {
+    resetRetryCount?: boolean;
+    clearLastError?: boolean;
+  }
 ): Promise<void> {
   const database = await getDB();
   const report = await getPendingReport(id);
@@ -253,9 +257,13 @@ export async function updateReportStatus(
   report.status = status;
   if (lastError) {
     report.lastError = lastError;
+  } else if (options?.clearLastError) {
+    delete report.lastError;
   }
   if (status === 'retrying') {
     report.retryCount += 1;
+  } else if (options?.resetRetryCount) {
+    report.retryCount = 0;
   }
 
   return new Promise((resolve, reject) => {

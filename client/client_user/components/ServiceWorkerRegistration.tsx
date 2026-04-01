@@ -8,6 +8,16 @@ export default function ServiceWorkerRegistration() {
             return;
         }
 
+        const handleServiceWorkerMessage = (event: MessageEvent) => {
+            if (event.data?.type === "OFFLINE_SYNC_COMPLETE") {
+                window.dispatchEvent(
+                    new CustomEvent("offline-sync-complete", {
+                        detail: event.data.detail,
+                    })
+                );
+            }
+        };
+
         // Service workers frequently cause stale bundles and cached route responses
         // during local development, so we explicitly remove them outside production.
         if (process.env.NODE_ENV !== "production") {
@@ -22,6 +32,8 @@ export default function ServiceWorkerRegistration() {
             return;
         }
 
+        navigator.serviceWorker.addEventListener("message", handleServiceWorkerMessage);
+
         navigator.serviceWorker
             .register("/sw.js")
             .then((registration) => {
@@ -33,6 +45,10 @@ export default function ServiceWorkerRegistration() {
             .catch((err) => {
                 console.error("SW registration failed:", err);
             });
+
+        return () => {
+            navigator.serviceWorker.removeEventListener("message", handleServiceWorkerMessage);
+        };
     }, []);
 
     return null;

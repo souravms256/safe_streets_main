@@ -318,8 +318,7 @@ export default function ReportPage() {
         }
     }, []);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSubmit = async () => {
         if (files.length === 0 || !location) {
             toast.error("Please provide at least one image and your location.");
             return;
@@ -418,8 +417,7 @@ export default function ReportPage() {
         }
     };
 
-    const handleSave = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSave = async () => {
         if (files.length === 0 || !location) {
             toast.error("Please provide at least one image and your location.");
             return;
@@ -511,7 +509,13 @@ export default function ReportPage() {
                 )}
 
                 <div className="rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-900">
-                    <form onSubmit={handleSubmit} className="space-y-8">
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            void handleSubmit();
+                        }}
+                        className="space-y-8"
+                    >
                         <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/60 p-6 dark:border-slate-700 dark:bg-slate-800/50">
                             <div>
                                 <h2 className="text-sm font-semibold text-slate-900 dark:text-white">

@@ -152,7 +152,10 @@ export async function retryFailedReports(): Promise<{
 
   for (const report of failedReports) {
     // Reset retry count to allow retries
-    await updateReportStatus(report.id, 'pending');
+    await updateReportStatus(report.id, 'pending', undefined, {
+      resetRetryCount: true,
+      clearLastError: true,
+    });
 
     const success = await syncSingleReport(report.id);
     if (success) {
