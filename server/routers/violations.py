@@ -159,7 +159,7 @@ async def report_violation(
     if is_community_garbage_report:
         detected_type = COMMUNITY_GARBAGE_TYPE
         details = {
-            "analysis_summary": "Garbage was reported directly by a community member. No AI detection was used for this report.",
+            "analysis_summary": "Report submitted by a community member and categorized as a community garbage issue.",
             "community_issue": True,
             "community_issue_type": "Garbage",
             "garbage_detected": True,

@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from core.dependencies import get_current_admin
+from postgrest.exceptions import APIError
 from utils.supabase_client import supabase
+from utils.logging import violations_logger
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta, timezone
@@ -82,6 +84,21 @@ class UserDetailsResponse(BaseModel):
 class UpdateViolationResponse(BaseModel):
     message: str
     data: Dict[str, Any]
+
+
+def _normalize_violation_details(details: Any) -> Dict[str, Any]:
+    return details if isinstance(details, dict) else {}
+
+
+def _format_postgrest_error(error: APIError) -> str:
+    if error.code == "42703" and "updated_at" in (error.message or "").lower():
+        return (
+            "Database schema mismatch: the violations table is missing the "
+            "`updated_at` column expected by its update trigger. Run the SQL "
+            "fix in server/scripts/fix_violations_updated_at.sql."
+        )
+
+    return error.message or str(error)
 
 
 @router.get("/users", response_model=List[Dict[str, Any]])
@@ -311,6 +328,7 @@ def update_violation_status(
     Awards 10 points to the user if status becomes 'Verified'.
     """
     try:
+        violations_logger.info(f"Updating violation {violation_id} to status {update.status}")
         # Get existing violation including current details
         existing = (
             supabase.table("violations")
@@ -320,6 +338,7 @@ def update_violation_status(
             .execute()
         )
         if not existing.data:
+            violations_logger.warning(f"Violation {violation_id} not found")
             raise HTTPException(status_code=404, detail="Violation not found")
 
         violation_user_id = existing.data["user_id"]
@@ -332,9 +351,7 @@ def update_violation_status(
         # Merge admin comments into existing details (don't overwrite!)
         admin_comment = update.admin_comments or update.admin_note
         if admin_comment:
-            existing_details = existing.data.get("details") or {}
-            if isinstance(existing_details, str):
-                existing_details = {}
+            existing_details = _normalize_violation_details(existing.data.get("details"))
             existing_details["admin_comments"] = admin_comment
             existing_details["admin_reviewed_at"] = datetime.now(
                 timezone.utc
@@ -345,6 +362,33 @@ def update_violation_status(
             supabase.table("violations").update(data).eq("id", violation_id).execute()
         )
 
+        violations_logger.info(f"Update result for {violation_id}: {result.data}")
+
+        # Supabase updates may return no rows depending on the PostgREST preference.
+        if result.data:
+            updated_data = (
+                result.data[0]
+                if isinstance(result.data, list) and len(result.data) > 0
+                else result.data
+            )
+        else:
+            refreshed = (
+                supabase.table("violations")
+                .select("*")
+                .eq("id", violation_id)
+                .single()
+                .execute()
+            )
+            updated_data = refreshed.data
+
+        if not updated_data:
+            violations_logger.error(
+                f"Update failed for violation {violation_id} - no data returned"
+            )
+            raise HTTPException(
+                status_code=400, detail="Failed to fetch updated violation data"
+            )
+
         # Award Points logic
         if update.status == "Verified" and old_status != "Verified":
             # Atomic increment using Supabase RPC to prevent race conditions
@@ -354,47 +398,63 @@ def update_violation_status(
                 ).execute()
             except Exception:
                 # Fallback to fetch-then-update if RPC doesn't exist yet
-                profile = (
-                    supabase.table("profiles")
-                    .select("points")
-                    .eq("id", violation_user_id)
-                    .single()
-                    .execute()
-                )
-                current_points = profile.data.get("points") or 0
-                supabase.table("profiles").update({"points": current_points + 10}).eq(
-                    "id", violation_user_id
-                ).execute()
+                try:
+                    profile = (
+                        supabase.table("profiles")
+                        .select("points")
+                        .eq("id", violation_user_id)
+                        .single()
+                        .execute()
+                    )
+                    current_points = profile.data.get("points", 0) if profile.data else 0
+                    supabase.table("profiles").update({"points": current_points + 10}).eq(
+                        "id", violation_user_id
+                    ).execute()
+                except Exception as fallback_error:
+                    violations_logger.error(f"Failed to award points: {str(fallback_error)}")
 
             # Create Notification
-            comment_text = f' Admin says: "{admin_comment}"' if admin_comment else ""
-            notification_data = {
-                "user_id": violation_user_id,
-                "title": "Report Verified! 🏆",
-                "message": f"Your report for '{violation_type}' has been verified. You've earned 10 points!{comment_text}",
-                "type": "verification",
-                "is_read": False,
-                "created_at": datetime.now(timezone.utc).isoformat(),
-            }
-            supabase.table("notifications").insert(notification_data).execute()
+            try:
+                comment_text = f' Admin says: "{admin_comment}"' if admin_comment else ""
+                notification_data = {
+                    "user_id": violation_user_id,
+                    "title": "Report Verified! 🏆",
+                    "message": f"Your report for '{violation_type}' has been verified. You've earned 10 points!{comment_text}",
+                    "type": "verification",
+                    "is_read": False,
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                }
+                supabase.table("notifications").insert(notification_data).execute()
+            except Exception as notif_error:
+                violations_logger.error(f"Failed to create verification notification: {str(notif_error)}")
 
         elif update.status == "Rejected" and old_status != "Rejected":
             # Notify user about rejection with admin comment
-            comment_text = f' Reason: "{admin_comment}"' if admin_comment else ""
-            notification_data = {
-                "user_id": violation_user_id,
-                "title": "Report Rejected ❌",
-                "message": f"Your report for '{violation_type}' has been rejected.{comment_text}",
-                "type": "rejection",
-                "is_read": False,
-                "created_at": datetime.now(timezone.utc).isoformat(),
-            }
-            supabase.table("notifications").insert(notification_data).execute()
+            try:
+                comment_text = f' Reason: "{admin_comment}"' if admin_comment else ""
+                notification_data = {
+                    "user_id": violation_user_id,
+                    "title": "Report Rejected ❌",
+                    "message": f"Your report for '{violation_type}' has been rejected.{comment_text}",
+                    "type": "rejection",
+                    "is_read": False,
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                }
+                supabase.table("notifications").insert(notification_data).execute()
+            except Exception as notif_error:
+                violations_logger.error(f"Failed to create rejection notification: {str(notif_error)}")
 
-        return {"message": "Status updated successfully", "data": result.data[0]}
+        return {"message": "Status updated successfully", "data": updated_data}
     except HTTPException:
         raise
+    except APIError as e:
+        detail = _format_postgrest_error(e)
+        violations_logger.error(
+            f"Database error updating violation {violation_id}: {detail}", exc_info=True
+        )
+        raise HTTPException(status_code=500, detail=detail)
     except Exception as e:
+        violations_logger.error(f"Unexpected error updating violation {violation_id}: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -432,9 +492,7 @@ def bulk_update_status(update: BulkStatusUpdate, admin=Depends(get_current_admin
             data = {"status": update.status}
 
             if update.admin_comments:
-                existing_details = existing.data.get("details") or {}
-                if isinstance(existing_details, str):
-                    existing_details = {}
+                existing_details = _normalize_violation_details(existing.data.get("details"))
                 existing_details["admin_comments"] = update.admin_comments
                 existing_details["admin_reviewed_at"] = datetime.now(
                     timezone.utc
@@ -484,6 +542,8 @@ def bulk_update_status(update: BulkStatusUpdate, admin=Depends(get_current_admin
                 ).execute()
 
             success_count += 1
+        except APIError as e:
+            errors.append({"id": vid, "error": _format_postgrest_error(e)})
         except Exception as e:
             errors.append({"id": vid, "error": str(e)})
 
